@@ -3,3 +3,19 @@ title: "07_differential_composition_analysis"
 format: html
 ---
 
+```{r}
+# Load libraries
+suppressPackageStartupMessages({
+library(Seurat)
+library(DCATS)
+library(SingleCellExperiment)
+library(dplyr)
+library(fgsea)
+library(ggplot2)
+library(ggrepel)
+library(tibble)
+library(tidyverse)
+})
+```
+
+For differential composition analysis, we use DCATS
