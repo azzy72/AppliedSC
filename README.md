@@ -38,13 +38,11 @@ The collection metadata from HCA is used to:
 
 Proving crucial in the harvesting and organization of the data.
 
-⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ### 2. Downloading Data
 
 All raw data are downloaded via the HCA UI and stored locally.
 
-⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ### 3. File Organization (UNIX)
 
