@@ -1,0 +1,74 @@
+---
+title: "02_data_processing"
+format: html
+---
+
+## QC
+
+```{r}
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(Signac)
+    library(GenomeInfoDb)
+    library(stringr)
+    library(rtracklayer)
+    library(GenomicRanges)
+  })
+
+source("./functions.R")
+sample_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/" #dir with individual sample seurat objects.
+```
+
+### B006-A-002
+
+```{r}
+sample_name <- "B006-A-002"
+SampleSeurat <- readRDS(str_c(sample_path, sample_name, "_seurat.rds"))
+DefaultAssay(SampleSeurat) <- "RNA"
+
+# Show QC metrics for the first 5 cells
+head(SampleSeurat@meta.data, 5)
+```
+
+Check for NAs
+
+```{r}
+table(is.na(SampleSeurat$percent.hb))
+```
+
+Dimensions before filtering
+
+```{r}
+print(dim(SampleSeurat))
+```
+
+**Adding mitochondrial, hemoglobin & ribosomal genes**
+
+```{r}
+#Mitochondrial genes
+SampleSeurat@meta.data[["percent.mt"]] <- PercentageFeatureSet(SampleSeurat, pattern = "^MT-")
+
+#Hemoglobin genes
+hemo_gene_names <- grep("^HB", rownames(SampleSeurat), value = TRUE) 
+hemo_gene_names <- filter_hemoglobin_genes(hemo_gene_names) # Filter hemoglobin genes based on function
+SampleSeurat@meta.data[["percent.hb"]] <- PercentageFeatureSet(SampleSeurat, features=hemo_gene_names)
+
+#Ribosomal genes
+ribo_large <- grep("^RPL", rownames(SampleSeurat), value = TRUE)
+ribo_small <- grep("^RPL", rownames(SampleSeurat), value = TRUE)
+ribo_genes <- c(ribo_large, ribo_small)
+SampleSeurat@meta.data[["percent.rb"]] <- PercentageFeatureSet(SampleSeurat, feature=ribo_genes)
+```
+
+Visualize QC metrics
+
+```{r}
+# Visualize QC metrics as a violin plot
+VlnPlot(SampleSeurat, 
+        features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.hb", "percent.rb"),
+        ncol = 5, 
+        pt.size = 0.5,
+        alpha = 0.05)
+```
+
+## Load and combine sample data

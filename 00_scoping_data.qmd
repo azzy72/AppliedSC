@@ -1,0 +1,204 @@
+---
+title: "project_initial"
+format: html
+---
+
+## 00. Loading the filtered RDS from intestine
+
+```{r}
+library(Seurat)
+library(data.table)
+library(tidyverse)
+library(BiocSingular)
+library(scDblFinder)
+library(SingleCellExperiment)
+library(scater)
+library(patchwork)
+library(Signac)
+```
+
+```{r}
+data <- readRDS(file="/home/projects/exam_2026_22102/group2/d99bef00-558b-4297-b4bd-be81e1053925/clustered_duodenum_object.rds")
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+VlnPlot(data, 
+        features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo"),
+        ncol = 4, 
+        pt.size = 0.5,
+        alpha = 0.01)
+```
+
+```{r}
+VlnPlot(data, 
+        features = c("nFeature_RNA"), 
+        ncol = 1, pt.size = 0.5, alpha = 0.01)
+```
+
+### clean object
+
+```{r}
+# 1. Extract the raw counts and metadata
+raw_counts <- GetAssayData(data, assay = "RNA", slot = "counts")
+metadata <- data@meta.data
+
+# 2. Create a new Seurat object
+# This automatically removes all DimReducs, Graphs, and extra Assays
+clean_seurat <- CreateSeuratObject(counts = raw_counts, 
+                                   meta.data = metadata)
+```
+
+```{r}
+VlnPlot(clean_seurat, 
+        features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo"),
+        ncol = 4, 
+        pt.size = 0.5,
+        alpha = 0.01)
+```
+
+```{r}
+clean_nFeature <- VlnPlot(clean_seurat, 
+        features = c("nFeature_RNA"), 
+        ncol = 1, pt.size = 0.5, alpha = 0.05)
+
+clean_mt <- VlnPlot(clean_seurat, features = c("percent.mt"), ncol=1, pt.size = 0.5, alpha = 0.05)
+
+```
+
+```{r}
+print(clean_mt)
+```
+
+### Count matrix
+
+```{r}
+# Load the data
+# header = TRUE assumes the first row contains cell names
+# sep = "\t" specifies it is a tab-separated file
+raw_counts <- fread("/home/projects/exam_2026_22102/group2/test_pull/B005-A-201_atac_fragments.tsv.gz", header = TRUE)
+
+# Convert to a data frame so we can set row names
+# Often, the first column contains gene names
+raw_counts <- as.data.frame(raw_counts)
+rownames(raw_counts) <- raw_counts[[1]]
+raw_counts <- raw_counts[, -1] # Remove the original gene name column
+```
+
+```{r}
+# Convert the dense data frame to a sparse matrix
+sparse_counts <- as.sparse(as.matrix(raw_counts))
+```
+
+## 01. The intestine dataset
+
+```{r}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(Seurat)
+  library(Signac)
+  library(Matrix)
+  library(ggplot2)
+  library(tidyverse)
+})
+```
+
+### Testing HCA Download
+
+```{r}
+proj_prefix <- "B011-A-002"
+path_to_B011 <- str_c("/home/projects/exam_2026_22102/group2/intestine_data/", proj_prefix,"/")
+atac_annotation_bed <- "/home/projects/exam_2026_22102/group2/stromal_peaks.bed.gz"
+
+# 1. Load the sparse matrix
+counts <- ReadMtx(
+  mtx = str_c(path_to_B011, proj_prefix, "_matrix.mtx.gz"), 
+  features = str_c(path_to_B011, proj_prefix, "_features.tsv.gz"), 
+  cells = str_c(path_to_B011, proj_prefix, "_barcodes.tsv.gz") 
+)
+
+# 2. Create the Seurat Object
+seurat_obj <- CreateSeuratObject(counts = counts, project = proj_prefix)
+```
+
+```{r}
+head(seurat_obj)
+```
+
+### Attach ATAC data
+
+```{r}
+# Path to your fragments file
+frag_path <- str_c(path_to_B011, "B011-A-002_atac_fragments.tsv.gz.tbi")
+
+# 1. Create a Fragment object
+# 'cells' should match the barcodes already in your Seurat object
+frags <- CreateFragmentObject(
+  path = frag_path,
+  cells = colnames(seurat_obj)
+)
+
+# 2. Add the fragments to the ATAC assay
+# This assumes your ATAC assay is named "ATAC"
+Fragments(seurat_obj[["ATAC"]]) <- frags
+```
+
+## 02. The spatial dataset
+
+```{r}
+# Load required libraries
+library(Seurat)
+library(Signac)
+library(Matrix)
+library(ggplot2)
+library(tidyverse)
+
+
+path_to_dir <- "/home/projects/exam_2026_22102/group2/data_v2/"
+
+# 1. LOAD SPATIAL DATA (Primary Assay)
+# The .h5 file from the HCA contains the gene expression matrix.
+# Since this is spatial data, we set the assay to "Spatial".
+spatial_counts <- Read10X_h5(str_c(path_to_dir, "spatial_10X0018_raw_feature_bc_matrix.h5"))
+
+# Create the Seurat object
+heart_obj <- CreateSeuratObject(
+  counts = spatial_counts,
+  assay = "Spatial",
+  project = "Heart_MI_Spatial"
+)
+```
+
+#### ATAC data
+
+```{r}
+# 2. INCORPORATE ATAC DATA (Secondary Assay)
+# Load the ATAC peak counts (TSV from HCA)
+atac_raw <- read.table(gzfile(str_c(path_to_dir, "10X_ATAC_CK354.tsv.gz")), header = TRUE, row.names = 1)
+atac_sparse <- as.sparse(as.matrix(atac_raw))
+```
+
+```{r}
+# Check for barcode overlap
+# Spatial and ATAC barcodes must match exactly. 
+# Sometimes spatial barcodes have a suffix (like "-1"); adjust if needed.
+common_cells <- intersect(colnames(heart_obj), colnames(atac_sparse))
+if(length(common_cells) == 0) {
+  stop("No overlapping barcodes found between Spatial and ATAC data. Check barcode suffixes.")
+}
+
+# Create Chromatin Assay (Signac)
+# Using hg38 as specified in the myocardial infarction project metadata
+atac_assay <- CreateChromatinAssay(
+  counts = atac_sparse[, common_cells],
+  sep = c(":", "-"),
+  genome = "hg38"
+)
+
+# Add to the existing spatial object
+#heart_obj <- subset(heart_obj, cells = common_cells)
+#heart_obj[["ATAC"]] <- atac_assay
+```

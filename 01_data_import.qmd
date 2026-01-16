@@ -1,0 +1,45 @@
+---
+title: "intestine_import"
+format: html
+---
+
+## Import data
+
+Through the terminal, the data has been downloaded using curl (on the server), where its been extracted into sample specific directories. The files in each directory is then used to create Seurat objects per sample (with RNA and ATAC assays). These Seurat objects are written to "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats"
+
+```{r}
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(Signac)
+    library(GenomeInfoDb)
+    library(stringr)
+    library(rtracklayer)
+    library(GenomicRanges)
+  })
+
+source("./functions.R")
+```
+
+```{r}
+B011_A_002_seurat <-rna_atac_integration_signac("B011-A-002")
+```
+
+```{r}
+saveRDS(B006_A_002_seurat, file="./B006_A_002_seurat.rds")
+```
+
+## Running all and saving rds.
+
+```{r}
+save_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/" #dir to save individual sample seurat objects.
+prefixes <- c("B006", "B008", "B010", "B011", "B012")
+
+for (prefix in prefixes) {
+  seurat_obj <- rna_atac_integration_signac(prefix)
+  
+  # Save Seurat object as RDS file, using the prefix in the filename
+  saveRDS(seurat_obj, file = str_c(save_path, prefix, "_seurat.rds"))
+  
+  print(str_c("Completed !", prefix))
+}
+```
