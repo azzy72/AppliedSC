@@ -136,6 +136,7 @@ System requirements:
 Contributions, suggestions, and issue reports are limited to denoted group members, as the project is intended for a DTU course (22102) hand-in.
 
 The collaborators are:
+
 	•	s203566
 	•	s204643
 	•	s215092
