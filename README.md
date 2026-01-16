@@ -73,6 +73,7 @@ The main entry point for processing a sample is:
 rna_atac_integration_signac()
 
 This function:
+
 	•	Reads RNA and ATAC inputs from a sample directory
 	•	Constructs Seurat objects
 	•	Performs modality-specific preprocessing
@@ -82,6 +83,7 @@ This function:
 ## 🧪 Sample-Level Workflow
 
 For each sample:
+
 	1.	Create Seurat objects
 	•	RNA assay
 	•	ATAC assay
@@ -97,6 +99,7 @@ For each sample:
 ## 🔗 Merging Strategy
 
 After QC:
+
 	•	Individual, filtered Seurat objects are merged into a single object
 	•	The merged object is saved to disk for downstream analysis
 
@@ -110,6 +113,7 @@ Performing QC before merging significantly reduces computational load and memory
 ## 📦 Dependencies
 
 Key R packages:
+
 	•	Seurat
 	•	Signac
 	•	stringr
@@ -117,6 +121,7 @@ Key R packages:
 	•	GenomicRanges
 
 System requirements:
+
 	•	UNIX-compatible OS
 	•	R (≥ 4.2 recommended)
 	•	RStudio (optional but recommended)
