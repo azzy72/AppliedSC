@@ -6,7 +6,51 @@ format: html
 ## Load and combine sample data
 
 ```{r}
+#reading the seruat objects
+B006 <- readRDS("B006_seurat.rds")
+B008 <- readRDS("B008_seurat.rds")
+B010 <- readRDS("B010_seruat.rds")
+B011 <- readRDS("B011_seurat.rds")
+B012 <- readRDS("B012_seurat.rds")
 
+
+
+B006$donor <- "B006"
+B008$donor <- "B008"
+B010$donor <- "B010"
+B011$donor <- "B011"
+B012$donor <- "B012"
+
+
+EC <- merge(
+  x = B006,
+  y = list(B008, B010, B011, B012),
+  add.cell.ids = c("B006","B008","B010","B011","B012"),
+  project = "AllDonors"
+)
+
+# checking if meta data was perserved
+table(EC$donor)
+
+dim(EC) # dim before subsetting
+```
+
+## Subsetting
+
+```{r}
+
+set.seed(123)
+
+cells.use <- unlist(
+  lapply(
+    split(Cells(EC), EC$donor),
+    function(x) sample(x, 8000)
+  )
+)
+
+EC <- subset(EC, cells = cells.use)
+
+dim(EC) # dim subsetting
 ```
 
 ## QC
