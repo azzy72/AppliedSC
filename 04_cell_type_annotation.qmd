@@ -3,6 +3,22 @@ title: "04_cell_type_annotation"
 format: html
 ---
 
+```{r}
+# Load libraries
+suppressPackageStartupMessages({
+library(Seurat)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(tidyr)
+library(multtest)
+library(metap)
+library(tibble)
+library(clustree)
+library(SingleR)
+})
+```
+
 ### Cell clustering
 
 For cell type annotation, we will perform clustering first to gain insight into the local relationships of cell types.
@@ -21,6 +37,49 @@ obj.cca <- FindClusters(obj.cca,
                         graph.name = "CCA_snn")
 ```
 
-For the clustering, we will test different resolutions and determine the lowest resolution that clusters the cell types.
-
 ### Clustering optimization
+
+Clustering optimization is necessary to come to a clustering of cell types that we can confidently continue our analysis on. For optimization, we will test different resolutions (k) and determine the lowest resolution that provides a good clustering. To investigate this, we will create a clustree.
+
+```{r}
+clustree(obj.cca, prefix = "CCA_snn_res.")
+```
+
+```{r}
+# Set Idents to the resolution that was best
+Idents(obj.cca) <- "CCA_snn_res.X.X" 
+```
+
+### Cell type assignment
+
+Initially, performing automatic cell type assignment due to not only the speed. but also now the quality of the reference database.
+
+To run automatic cell type assignment the Seurat object has to be a SingleCellExperiment (SCE) object
+
+```{r}
+# Call upon the reference database
+# NOTE: reference database still undecided
+ref <- as.SingleCellExperiment(obj, assay = "RNA")
+```
+
+```{r}
+obj.counts <- GetAssayData(obj.cca, assay = "RNA", layer = 'counts')
+```
+
+```{r}
+# Run SingleR
+cell_type_pred <- SingleR(test = obj.counts,
+                          ref = ref,
+                          labels = ref$CellType,
+                          de.method="wilcox")
+```
+
+```{r}
+# Save the annotation results
+obj.cca$cell_type_automatic <- cell_type_pred$pruned.labels[match(rownames(obj.cca@meta.data), rownames(cell_type_pred))]
+```
+
+```{r}
+# Visualize
+DimPlot(obj.cca, reduction = 'umap_cca', group.by = 'cell_type_automatic')
+```
