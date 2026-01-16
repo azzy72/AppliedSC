@@ -9,6 +9,7 @@ This repository contains a reproducible pipeline for importing, organizing, and 
 ## 🧭 Project Overview
 
 The pipeline is divided into the following conceptual stages, which aligns with the naming convention of the quatro documents:
+
 	1.	Data Import & Organization
 	2.	Data Preprocessing 
 	3.	Data Integration
