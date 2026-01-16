@@ -52,6 +52,47 @@ Idents(obj.cca) <- "CCA_snn_res.X.X"
 
 ### Cell type assignment
 
+**Manual marker cell type assignment**
+
+Cell type assignment by manual markers requires prior knowledge about characteristic markers for the cells that we are expecting in the data. The expression of the marker can be visualized with the `FeaturePlot()`
+
+```{r}
+# Visualize gene expression
+FeaturePlot(obj.cca, 
+            reduction = "umap_cca", 
+            features = c("XXX"), 
+            order = TRUE,
+            min.cutoff = 'q10', 
+            label = TRUE)
+```
+
+It is also possible to utilize `FindConsveredMarkers()` and `FindMarkers()` for identifying genes that stand out in a cluster.
+
+```{r}
+# Compare one cluster to all the other clusters
+# USE IF A CLUSTER IS STANDING OUT FROM OTHERS
+clusterX_conserved_markers <- FindConservedMarkers(obj.cca,
+                                                   ident.1 = 10,
+                                                   grouping.var = "condition",
+                                                   only.pos = TRUE, min.pct = 0.25,
+                                                   min.diff.pct = 0.25, 
+                                                   logfc.threshold = 0.25)
+```
+
+```{r}
+# Compare one cluster to another
+clusterX_clusterY_markers <- FindMarkers(obj.cca,
+                                         ident.1 = X,
+                                         ident.2 = Y,
+                                         grouping.var = "condition",
+                                         only.pos = TRUE, 
+                                         min.pct = 0.25,
+                                         min.diff.pct = 0.25, 
+                                         logfc.threshold = 0.25)
+```
+
+**Automatic cell type assignment**
+
 Initially, performing automatic cell type assignment due to not only the speed. but also now the quality of the reference database.
 
 To run automatic cell type assignment the Seurat object has to be a SingleCellExperiment (SCE) object
