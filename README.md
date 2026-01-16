@@ -1,4 +1,4 @@
-# RNA–ATAC Integration Pipeline (Signac)
+# Group2 Applied SC Bioinformatics - Organization of the Human Intestine
 
 This repository contains a reproducible pipeline for importing, organizing, and integrating paired RNA-seq and ATAC-seq single-cell data using Seurat and Signac. The workflow is designed around Human Cell Atlas (HCA) datasets and emphasizes clear data organization, sample-level processing, and downstream analysis.
 
