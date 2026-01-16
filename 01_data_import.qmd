@@ -21,11 +21,11 @@ source("./functions.R")
 ```
 
 ```{r}
-B011_A_002_seurat <-rna_atac_integration_signac("B011-A-002")
+B012_seurat <-rna_atac_integration_signac("B012")
 ```
 
 ```{r}
-saveRDS(B006_A_002_seurat, file="./B006_A_002_seurat.rds")
+saveRDS(B012_seurat, file="./B012_seurat.rds")
 ```
 
 ## Running all and saving rds.
@@ -42,4 +42,156 @@ for (prefix in prefixes) {
   
   print(str_c("Completed !", prefix))
 }
+```
+
+## Manual loading
+
+```{r}
+############################################
+## RNA + ATAC integration with Signac
+############################################
+
+############################################
+## Paths and project info
+############################################
+proj_prefix <- "B012"
+message(str_c("Starting ",proj_prefix))
+
+intestine_path <- "/home/projects/exam_2026_22102/group2/intestine_data/"
+
+#Regex patterns
+matrix_pattern <- ".*_matrix\\.mtx\\.gz$"
+features_pattern <- ".*_features\\.tsv\\.gz$"
+barcodes_pattern <- ".*_barcodes\\.tsv\\.gz$"
+fragments_pattern <- ".*_atac_fragments\\.tsv\\.gz\\.tbi$"
+#peaks_pattern <- "stromal_peaks\\.bed\\.gz$"
+
+rna_matrix   <- return_regex_filepath(intestine_path, proj_prefix, matrix_pattern)
+rna_features <- return_regex_filepath(intestine_path, proj_prefix, features_pattern)
+rna_barcodes <- return_regex_filepath(intestine_path, proj_prefix, barcodes_pattern)
+fragments_file <- return_regex_filepath(intestine_path, proj_prefix, fragments_pattern)
+
+peaks_file <- str_c(intestine_path, "stromal_peaks.bed.gz") #only in one place
+
+# Check if files are recognizes
+#message("rna_matrix", rna_matrix)
+#message("rna_features", rna_features)
+#message("rna_barcodes", rna_barcodes)
+message("fragments_file", fragments_file)
+#message("peaks_file", peaks_file)
+
+############################################
+## 1. Load RNA counts and create Seurat object
+############################################
+message("Loading RNA counts and creating Seurat object")
+counts <- ReadMtx(
+  mtx = rna_matrix,
+  features = rna_features,
+  cells = rna_barcodes
+)
+
+seurat_obj <- CreateSeuratObject(
+  counts = counts,
+  project = proj_prefix
+)
+```
+
+```{r}
+############################################
+## 2. Load ATAC peaks (space-separated file)
+############################################
+message("Loading ATAC peaks")
+peaks_df <- read.table(
+  peaks_file,
+  header = FALSE,
+  sep = "",
+  stringsAsFactors = FALSE
+)
+
+peaks_df <- peaks_df[, 1:3]
+colnames(peaks_df) <- c("chr", "start", "end")
+
+peaks <- makeGRangesFromDataFrame(
+  peaks_df,
+  seqnames.field = "chr",
+  start.field = "start",
+  end.field = "end",
+  keep.extra.columns = FALSE
+)
+
+peaks <- keepStandardChromosomes(peaks, pruning.mode = "coarse")
+peaks <- peaks[width(peaks) > 20]
+
+```
+
+Investigating fragment error
+
+```{r}
+fragments_pattern <- ".*_atac_fragments\\.tsv\\.gz$"
+fragments_file <- return_regex_filepath(intestine_path, proj_prefix, fragments_pattern)
+file <- gzfile(fragments_file, "rt")
+```
+
+```{r}
+# Check Seurat object barcodes
+head(colnames(seurat_obj))
+
+# Check Fragment file barcodes (using tabix via Signac/R)
+# Note: You can also check this in terminal using: zcat fragments.tsv.gz | head -n 20
+#head(read.table(file, nrow = 10)$V4)
+
+head(read.table(file, nrow = 10))
+```
+
+```{r}
+############################################
+## 3. Create Fragment object
+############################################
+message("Creating Fragment object")
+fragments <- CreateFragmentObject(
+  path = fragments_file,
+  cells = colnames(seurat_obj)
+)
+```
+
+```{r}
+############################################
+## 4. Create ATAC count matrix
+############################################
+message("Creating ATAC count matrix")
+atac_counts <- FeatureMatrix(
+  fragments = fragments,
+  features = peaks,
+  cells = colnames(seurat_obj)
+)
+
+```
+
+```{r}
+############################################
+## 5. Create ChromatinAssay
+############################################
+message("Creating ChromatinAssay")
+chrom_assay <- CreateChromatinAssay(
+  counts = atac_counts,
+  fragments = fragments,
+  genome = "hg38"  # change to mm10 if mouse
+)
+```
+
+```{r}
+############################################
+## 6. Add ATAC assay to Seurat object
+############################################
+message("Adding ATAC assay to Seurat object")
+seurat_obj[["ATAC"]] <- chrom_assay
+DefaultAssay(seurat_obj) <- "RNA"
+
+message(str_c("Completed ",proj_prefix))
+seurat_obj
+```
+
+```{r}
+save_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/"
+saveRDS(seurat_obj, file = str_c(save_path, proj_prefix, "_seurat.rds"))
 ```

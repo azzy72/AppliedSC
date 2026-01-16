@@ -42,7 +42,7 @@ rna_atac_integration_signac <- function(proj_prefix) {
   #message("rna_matrix", rna_matrix)
   #message("rna_features", rna_features)
   #message("rna_barcodes", rna_barcodes)
-  #message("fragments_file", fragments_file)
+  message("fragments_file", fragments_file)
   #message("peaks_file", peaks_file)
   
   ############################################
