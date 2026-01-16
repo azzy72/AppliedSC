@@ -31,9 +31,11 @@ The guiding principle is to process and quality-control samples individually bef
 Data are sourced from the Human Cell Atlas (HCA), under the name [Organization of the human intestine at single-cell resolution]([url](https://explore.data.humancellatlas.org/projects/16241d82-3119-4bdd-bba5-5097c0591ba0))
 
 The collection metadata from HCA is used to:
+
 	•	Understand sample groupings
 	•	Identify which files belong to which biological samples
 	•	Map raw files to sample-specific directories
+
 Proving crucial in the harvesting and organization of the data.
 
 ⸻
