@@ -31,6 +31,8 @@ This plot reveals that....
 Before any integration can take place, we split the data sets into five Seurat Objects by using condition and go through pre-processing one more time for each object.
 
 ```{r}
+# Split the data
+# REMEMBER to update 'condition' if needed
 obj[["RNA"]] <- split(obj[["RNA"]], f = obj$condition)
 ```
 
@@ -76,8 +78,9 @@ obj <- RunUMAP(obj,
 ```
 
 ```{r}
-p1 <- DimPlot(obj, reduction = 'umap', group.by = 'timepoint') + ggtitle("UMAP raw_data")
-p2 <- DimPlot(obj, reduction = "umap_cca", group.by = "timepoint") + ggtitle("UMAP CCA")
+# REMEMBER to update 'condition' if needed
+p1 <- DimPlot(obj, reduction = 'umap', group.by = 'condition') + ggtitle("UMAP raw_data")
+p2 <- DimPlot(obj, reduction = "umap_cca", group.by = "condition") + ggtitle("UMAP CCA")
 
 wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
 ```
