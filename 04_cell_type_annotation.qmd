@@ -19,6 +19,8 @@ library(SingleR)
 })
 ```
 
+
+
 ### Cell clustering
 
 For cell type annotation, we will perform clustering first to gain insight into the local relationships of cell types.
@@ -93,9 +95,43 @@ clusterX_clusterY_markers <- FindMarkers(obj.cca,
 
 **Automatic cell type assignment**
 
+following this tutorial: https://biostatsquid.com/singler-tutorial/
+
 Initially, performing automatic cell type assignment due to not only the speed. but also now the quality of the reference database.
 
 To run automatic cell type assignment the Seurat object has to be a SingleCellExperiment (SCE) object
+
+First of all we need a cell annotation reference dataset
+
+```{r}
+raw_counts <- LayerData(seu, assay = "RNA", layer = 'counts') #
+raw_counts[c('VIM', 'BCL2', 'TP53', 'CD4'),1:5]
+norm_counts <- LayerData(seu, assay = "RNA", layer = 'data') #
+norm_counts[c('VIM', 'BCL2', 'TP53', 'CD4'),1:5]
+```
+
+Thereafter we use the HumanPrimaryCellAtlasData to find a reference dataset
+
+```{r}
+
+# 2. Get reference dataset
+ref <- celldex::HumanPrimaryCellAtlasData()
+unique(ref$label.main)
+unique(ref$label.fine)
+
+```
+
+Since we have a PBMC dataset, there’s a lot of cell types in the reference dataset, like astrocytes, osteoblasts, hepatocytes.. that are not present in our dataset. This is why I’m going to only keep some blood cell types. However, you need to be careful when removing cell types from your reference, since they may be present in your dataset.
+
+```{r}
+# Subset to include only relevant cell types (CAREFUL!)
+ref <- ref[,grepl('DC|B_cell|Neutrophils|T_cells|Monocyte|Erythroblast|
+                 Macrophage|NK_cell|Platelets|Myelocyte', ref$label.main)]
+unique(ref$label.main)
+```
+
+
+
 
 ```{r}
 # Call upon the reference database
