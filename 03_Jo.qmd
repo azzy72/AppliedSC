@@ -1,6 +1,0 @@
----
-title: "03_Jo"
-format: html
----
-
-### Hello
