@@ -3,3 +3,81 @@ title: "03_sample_integration"
 format: html
 ---
 
+```{r}
+# Load libraries
+#| echo: false
+suppressPackageStartupMessages({
+library(Seurat)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(harmony)
+library(tidyr)
+library(multtest)
+library(metap)
+library(tibble)
+})
+```
+
+For sample integration it is our aim to perform horizontal integration across donors. This enables us to compare donors and capture biological variation (instead of technical).
+
+```{r}
+# Initial look at clustering (before integration)
+DimPlot(obj, reduction="umap", group.by="X")
+```
+
+This plot reveals that....
+
+Before any integration can take place, we split the data sets into five Seurat Objects by using condition and go through pre-processing one more time for each object.
+
+```{r}
+obj[["RNA"]] <- split(obj[["RNA"]], f = obj$condition)
+```
+
+```{r}
+obj <- NormalizeData(obj)
+obj <- FindVariableFeatures(obj)
+obj <- ScaleData(obj)
+obj <- RunPCA(obj)
+```
+
+To determine the number PCs to use, we plot and ElbowPlot()
+
+```{r}
+ElbowPlot(obj)
+```
+
+**Integrate layers:**
+
+```{r}
+# Anchor-based CCA integration
+# REMEMBER TO DETERMINE PCS
+obj <- IntegrateLayers(object = obj, 
+                       method = CCAIntegration,
+                       orig.reduction = "pca", 
+                       new.reduction = "CCA_Integration",
+                       dims = 1:14, 
+                       verbose = FALSE
+)
+
+# Re-join the split layers
+obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
+```
+
+After integration, we will run UMAP reduction again and visualize the new clustering.
+
+```{r}
+# Run UMAP
+# REMEMBER TO UPDATE PCS
+obj <- RunUMAP(obj, 
+               dims = 1:14, 
+               reduction = "CCA_Integration", 
+               reduction.name = "umap_cca")
+```
+
+```{r}
+p1 <- DimPlot(obj, reduction = 'umap', group.by = 'timepoint') + ggtitle("UMAP raw_data")
+p2 <- DimPlot(obj, reduction = "umap_cca", group.by = "timepoint") + ggtitle("UMAP CCA")
+
+wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
+```
