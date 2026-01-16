@@ -1,4 +1,4 @@
-RNA–ATAC Integration Pipeline (Signac)
+# RNA–ATAC Integration Pipeline (Signac)
 
 This repository contains a reproducible pipeline for importing, organizing, and integrating paired RNA-seq and ATAC-seq single-cell data using Seurat and Signac. The workflow is designed around Human Cell Atlas (HCA) datasets and emphasizes clear data organization, sample-level processing, and computational efficiency.
 
@@ -6,7 +6,7 @@ This repository contains a reproducible pipeline for importing, organizing, and 
 
 ⸻
 
-🧭 Project Overview
+## 🧭 Project Overview
 
 The pipeline is divided into two conceptual stages:
 	1.	Data Import & Organization
@@ -16,9 +16,9 @@ The guiding principle is to process and quality-control samples individually bef
 
 ⸻
 
-📁 Data Import
+## 📁 Data Import
 
-1. Source Dataset (HCA)
+### 1. Source Dataset (HCA)
 
 Data are sourced from the Human Cell Atlas (HCA) portal:
 	•	Project: HuBMAP: HBM692.JRZB.356
@@ -30,13 +30,13 @@ Metadata from HCA is used to:
 
 ⸻
 
-2. Downloading Data
+### 2. Downloading Data
 
 All raw data are downloaded via the HCA UI and stored locally.
 
 ⸻
 
-3. File Organization (UNIX)
+### 3. File Organization (UNIX)
 
 A UNIX-based helper script is used to organize files:
 	•	sort_pull.sh
@@ -57,7 +57,7 @@ Each directory corresponds to a single biological sample.
 
 ⸻
 
-🔧 Processing & Integration (R / RStudio)
+## 🔧 Processing & Integration (R / RStudio)
 
 All downstream steps are performed in R, primarily using Seurat and Signac.
 
@@ -74,7 +74,7 @@ This function:
 
 ⸻
 
-🧪 Sample-Level Workflow
+## 🧪 Sample-Level Workflow
 
 For each sample:
 	1.	Create Seurat objects
@@ -89,7 +89,7 @@ For each sample:
 
 ⸻
 
-🔗 Merging Strategy
+## 🔗 Merging Strategy
 
 After QC:
 	•	Individual, filtered Seurat objects are merged into a single object
@@ -101,7 +101,7 @@ Performing QC before merging significantly reduces computational load and memory
 
 ⸻
 
-📂 Repository Structure (Planned)
+## 📂 Repository Structure (Planned)
 
 ├── scripts/
 │   ├── sort_pull.sh
@@ -117,7 +117,7 @@ Performing QC before merging significantly reduces computational load and memory
 
 ⸻
 
-📦 Dependencies
+## 📦 Dependencies
 
 Key R packages:
 	•	Seurat
@@ -132,7 +132,7 @@ System requirements:
 
 ⸻
 
-🚧 Current Status
+## 🚧 Current Status
 	•	✅ Data import and organization
 	•	✅ Sample-level Seurat object creation
 	•	🔄 QC parameter tuning (in progress)
@@ -140,18 +140,18 @@ System requirements:
 
 ⸻
 
-🤝 Contributing
+## 🤝 Contributing
 
 Contributions, suggestions, and issue reports are welcome. Please open an issue or submit a pull request.
 
 ⸻
 
-📜 License
+## 📜 License
 
 This project is released under the MIT License (or specify otherwise).
 
 ⸻
 
-📬 Contact
+## 📬 Contact
 
 For questions or collaboration, please reach out via GitHub issues or discussions.
