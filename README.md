@@ -1,6 +1,6 @@
 # RNA–ATAC Integration Pipeline (Signac)
 
-This repository contains a reproducible pipeline for importing, organizing, and integrating paired RNA-seq and ATAC-seq single-cell data using Seurat and Signac. The workflow is designed around Human Cell Atlas (HCA) datasets and emphasizes clear data organization, sample-level processing, and computational efficiency.
+This repository contains a reproducible pipeline for importing, organizing, and integrating paired RNA-seq and ATAC-seq single-cell data using Seurat and Signac. The workflow is designed around Human Cell Atlas (HCA) datasets and emphasizes clear data organization, sample-level processing, and downstream analysis.
 
 ⚠️ Note: This repository is under active development. The schematic and structure may evolve as preprocessing and downstream analysis steps are finalized.
 
@@ -8,9 +8,16 @@ This repository contains a reproducible pipeline for importing, organizing, and 
 
 ## 🧭 Project Overview
 
-The pipeline is divided into two conceptual stages:
+The pipeline is divided into the following conceptual stages, which aligns with the naming convention of the quatro documents:
 	1.	Data Import & Organization
-	2.	Preprocessing & Integration
+	2.	Data Preprocessing 
+	3.	Data Integration
+	4.	Cell type annotation & Assignment of clusters
+	5a.	Differential gene expression & Gene enrichment
+	5b. Differential composition analysis
+	5c. Trajectory analysis
+	5d. Gene regulation interaction
+	5e. Cell-cell communication
 
 The guiding principle is to process and quality-control samples individually before merging, minimizing memory usage and computational overhead during integration.
 
@@ -20,13 +27,13 @@ The guiding principle is to process and quality-control samples individually bef
 
 ### 1. Source Dataset (HCA)
 
-Data are sourced from the Human Cell Atlas (HCA) portal:
-	•	Project: HuBMAP: HBM692.JRZB.356
+Data are sourced from the Human Cell Atlas (HCA), under the name [Organization of the human intestine at single-cell resolution]([url](https://explore.data.humancellatlas.org/projects/16241d82-3119-4bdd-bba5-5097c0591ba0))
 
-Metadata from HCA is used to:
+The collection metadata from HCA is used to:
 	•	Understand sample groupings
 	•	Identify which files belong to which biological samples
 	•	Map raw files to sample-specific directories
+Proving crucial in the harvesting and organization of the data.
 
 ⸻
 
@@ -38,12 +45,7 @@ All raw data are downloaded via the HCA UI and stored locally.
 
 ### 3. File Organization (UNIX)
 
-A UNIX-based helper script is used to organize files:
-	•	sort_pull.sh
-
-This script:
-	•	Parses downloaded HCA files
-	•	Sorts them into sample-specific directories
+Through basic UNIX commands, the data is reorganized into sample directories, containing raw matrix files used in the construction of a sample-specific seurat object
 
 Example directory naming convention:
 
@@ -52,8 +54,11 @@ B006-A-002/
 ├── features.tsv.gz
 ├── barcodes.tsv.gz
 ├── atac_fragments.tsv.gz
+├── atac_fragments.tsv.gz.tbi
 
-Each directory corresponds to a single biological sample.
+Where matrix denotes the scRNA count matrix, features and barcodes (cells) provide metadata for the scRNA transcriptomics data. Alternatively, atac_fragment.tsv.gz contains the scATAC-seq intervals, where the corresponding .tbi file denotes the indexing of the intervals.
+
+Hence, each directory corresponds to a single biological sample.
 
 ⸻
 
@@ -99,21 +104,6 @@ Rationale
 
 Performing QC before merging significantly reduces computational load and memory usage during integration, especially for large multi-sample datasets.
 
-⸻
-
-## 📂 Repository Structure (Planned)
-
-├── scripts/
-│   ├── sort_pull.sh
-│   ├── rna_atac_integration_signac.R
-│   └── helpers/
-├── data/
-│   ├── raw/
-│   └── processed/
-├── figures/
-├── README.md
-└── environment/
-
 
 ⸻
 
@@ -124,6 +114,7 @@ Key R packages:
 	•	Signac
 	•	stringr
 	•	tidyverse
+	•	GenomicRanges
 
 System requirements:
 	•	UNIX-compatible OS
@@ -142,13 +133,13 @@ System requirements:
 
 ## 🤝 Contributing
 
-Contributions, suggestions, and issue reports are welcome. Please open an issue or submit a pull request.
+Contributions, suggestions, and issue reports are limited to denoted group members, as the project is intended for a DTU course (22102) hand-in.
 
-⸻
-
-## 📜 License
-
-This project is released under the MIT License (or specify otherwise).
+The collaborators are:
+•	s203566
+•	s204643
+•	s215092
+•	s215045
 
 ⸻
 
