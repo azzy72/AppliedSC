@@ -3,3 +3,94 @@ title: "07_cell_cell_communication"
 format: html
 ---
 
+```{r}
+# Load libraries
+suppressPackageStartupMessages({
+library(CellChat)
+library(patchwork)
+library(future)
+})
+options(stringsAsFactors = FALSE)
+```
+
+Investigating cell-cell communication can be a good initial analysis to gain insight into the [potential]{.underline} interactions that the cells might have with each other.
+
+This analysis requires a receptor-ligand database that we obtain with CellChat
+
+```{r}
+# Load databatse
+CellChatDB <- CellChatDB.human
+showDatabaseCategory(CellChatDB)
+```
+
+```{r}
+# Subset the database to 'Secreted Signaling'
+CellChatDB.ss <- subsetDB(CellChatDB, 
+                          search = "Secreted Signaling")
+
+cellchat@DB <- CellChatDB.ss
+```
+
+SUBSET data?
+
+```{r}
+# Create a CellChat object
+cellchat <- createCellChat(object = obj.select, 
+                           meta = obj.select@meta.data,
+                           group.by = "cell_type_manual")
+```
+
+```{r}
+# subset the expression data of signaling genes for saving computation cost
+cellchat <- subsetData(cellchat)
+cellchat <- identifyOverExpressedGenes(cellchat)
+cellchat <- identifyOverExpressedInteractions(cellchat)
+```
+
+```{r}
+# Set parallel to split the tasks
+future::plan("multisession", workers = 4)
+```
+
+```{r}
+# Calculate the cell-cell communication network
+cellchat <- computeCommunProb(cellchat)
+```
+
+```{r}
+# Filter out the cell-cell communication if there are only few number of cells in certain cell groups
+cellchat <- filterCommunication(cellchat, 
+                                min.cells = 10)
+
+# Extract the inferred cellular communication network as a data frame
+df.net <- subsetCommunication(cellchat)  
+
+# Infer the cell-cell communication at a signaling pathway level
+cellchat <- computeCommunProbPathway(cellchat)
+```
+
+```{r}
+# Set the workload back to sequential
+future::plan(sequential)
+```
+
+```{r}
+#Calculate the aggregated cell-cell communication network
+cellchat <- aggregateNet(cellchat)
+groupSize <- as.numeric(table(cellchat@idents))
+```
+
+```{r}
+# Visualize
+par(mfrow = c(1,2), xpd=TRUE)
+netVisual_circle(cellchat@net$count, 
+                 vertex.weight = groupSize, 
+                 weight.scale = T, 
+                 label.edge= F, 
+                 title.name = "Number of interactions")
+netVisual_circle(cellchat@net$weight, 
+                 vertex.weight = groupSize, 
+                 weight.scale = T, 
+                 label.edge= F, 
+                 title.name = "Interaction strength")
+```
