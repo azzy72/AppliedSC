@@ -3,15 +3,36 @@ title: "02_data_processing"
 format: html
 ---
 
+```{r}
+
+suppressPackageStartupMessages({
+library(Seurat)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(tidyverse)
+library(harmony)
+library(tidyr)
+library(multtest)
+library(metap)
+library(tibble)
+library(Matrix)
+})
+```
+
 ## Load and combine sample data
 
 ```{r}
+
+
+sample_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/"
+
 #reading the seruat objects
-B006 <- readRDS("B006_seurat.rds")
-B008 <- readRDS("B008_seurat.rds")
-B010 <- readRDS("B010_seruat.rds")
-B011 <- readRDS("B011_seurat.rds")
-B012 <- readRDS("B012_seurat.rds")
+B006 <- readRDS(str_c(sample_path, "B006_seurat.rds"))
+B008 <- readRDS(str_c(sample_path, "B008_seurat.rds"))
+B010 <- readRDS(str_c(sample_path, "B010_seurat.rds"))
+B011 <- readRDS(str_c(sample_path, "B011_seurat.rds"))
+B012 <- readRDS(str_c(sample_path, "B012_seurat.rds"))
 
 
 
@@ -25,21 +46,87 @@ B012$donor <- "B012"
 EC <- merge(
   x = B006,
   y = list(B008, B010, B011, B012),
-  add.cell.ids = c("B006","B008","B010","B011","B012"),
+  add.cell.ids = c("B006","B008","B010","B011", "B012"),
   project = "AllDonors"
 )
+
 
 # checking if meta data was perserved
 table(EC$donor)
 
-dim(EC) # dim before subsetting
+# Joing layers so count matrix and such is pooled
+EC <- JoinLayers(EC)
+
+# Saving the seurat 
+saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_seurat.rds")
+
+dim(EC) # dim before subsetting, 545083 3569104
 ```
 
-## Subsetting
+# QC of the data
+
+## Percentages of mito and ribosomal
+
+```{r}
+#Mitochondrial genes
+EC@meta.data[["percent.mt"]] <- PercentageFeatureSet(EC, pattern = "^MT-")
+
+#Ribosomal genes proportions
+EC[["percent.ribo"]] <- PercentageFeatureSet(EC, pattern = "^RPS|^RPL|^rps|^rpl")
+
+```
+
+```{r}
+for (f in features) {
+  x <- EC[[f]][,1]
+  x[is.na(x) | is.infinite(x)] <- 0
+  EC[[f]] <- x
+}
+```
+
+```{r}
+colSums(is.na(EC@meta.data[, c(
+  "nFeature_RNA",
+  "nCount_RNA",
+  "percent.mt",
+  "percent.ribo"
+)]))
+```
+
+```{r}
+# Mito genes (adjust pattern if needed)
+EC[["percent.mt"]] <- PercentageFeatureSet(EC, pattern = "^MT-")
+
+# Ribosomal genes
+EC[["percent.ribo"]] <- PercentageFeatureSet(EC, pattern = "^RPS|^RPL")
+
+```
 
 ```{r}
 
-set.seed(123)
+# making identity same for all
+Idents(EC) <- factor(rep("all-cells", ncol(EC)))
+levels(Idents(EC))
+
+# Restoring the identity: 
+# Idents(EC) <- EC$donor
+
+# Visualize QC metrics as a violin plot
+p <- VlnPlot(EC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo"), ncol = 4, group.by = NULL)
+p
+```
+
+## Doublets investigation
+
+```{r}
+
+```
+
+# Random subsetting data
+
+```{r}
+
+set.seed(123) # seed for reproducibility
 
 cells.use <- unlist(
   lapply(
@@ -51,74 +138,11 @@ cells.use <- unlist(
 EC <- subset(EC, cells = cells.use)
 
 dim(EC) # dim subsetting
+
 ```
 
-## QC
+# Normalization, variables features and scaling
 
 ```{r}
-suppressPackageStartupMessages({
-    library(Seurat)
-    library(Signac)
-    library(GenomeInfoDb)
-    library(stringr)
-    library(rtracklayer)
-    library(GenomicRanges)
-  })
 
-source("./functions.R")
-sample_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/" #dir with individual sample seurat objects.
 ```
-
-### B006-A-002
-
-```{r}
-sample_name <- "B006-A-002"
-SampleSeurat <- readRDS(str_c(sample_path, sample_name, "_seurat.rds"))
-DefaultAssay(SampleSeurat) <- "RNA"
-
-# Show QC metrics for the first 5 cells
-head(SampleSeurat@meta.data, 5)
-```
-
-Check for NAs
-
-```{r}
-table(is.na(SampleSeurat$percent.hb))
-```
-
-Dimensions before filtering
-
-```{r}
-print(dim(SampleSeurat))
-```
-
-**Adding mitochondrial, hemoglobin & ribosomal genes**
-
-```{r}
-#Mitochondrial genes
-SampleSeurat@meta.data[["percent.mt"]] <- PercentageFeatureSet(SampleSeurat, pattern = "^MT-")
-
-#Hemoglobin genes
-hemo_gene_names <- grep("^HB", rownames(SampleSeurat), value = TRUE) 
-hemo_gene_names <- filter_hemoglobin_genes(hemo_gene_names) # Filter hemoglobin genes based on function
-SampleSeurat@meta.data[["percent.hb"]] <- PercentageFeatureSet(SampleSeurat, features=hemo_gene_names)
-
-#Ribosomal genes
-ribo_large <- grep("^RPL", rownames(SampleSeurat), value = TRUE)
-ribo_small <- grep("^RPL", rownames(SampleSeurat), value = TRUE)
-ribo_genes <- c(ribo_large, ribo_small)
-SampleSeurat@meta.data[["percent.rb"]] <- PercentageFeatureSet(SampleSeurat, feature=ribo_genes)
-```
-
-Visualize QC metrics
-
-```{r}
-# Visualize QC metrics as a violin plot
-VlnPlot(SampleSeurat, 
-        features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.hb", "percent.rb"),
-        ncol = 5, 
-        pt.size = 0.5,
-        alpha = 0.05)
-```
-
-## Load and combine sample data
