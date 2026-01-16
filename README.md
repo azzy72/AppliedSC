@@ -49,12 +49,12 @@ Through basic UNIX commands, the data is reorganized into sample directories, co
 
 Example directory naming convention:
 
-B006-A-002/
-├── matrix.mtx.gz
-├── features.tsv.gz
-├── barcodes.tsv.gz
-├── atac_fragments.tsv.gz
-├── atac_fragments.tsv.gz.tbi
+	B006-A-002/
+	├── matrix.mtx.gz
+	├── features.tsv.gz
+	├── barcodes.tsv.gz
+	├── atac_fragments.tsv.gz
+	├── atac_fragments.tsv.gz.tbi
 
 Where matrix denotes the scRNA count matrix, features and barcodes (cells) provide metadata for the scRNA transcriptomics data. Alternatively, atac_fragment.tsv.gz contains the scATAC-seq intervals, where the corresponding .tbi file denotes the indexing of the intervals.
 
