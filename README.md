@@ -4,7 +4,7 @@ This repository contains a reproducible pipeline for importing, organizing, and 
 
 ⚠️ Note: This repository is under active development. The schematic and structure may evolve as preprocessing and downstream analysis steps are finalized.
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 🧭 Project Overview
 
@@ -22,7 +22,7 @@ The pipeline is divided into the following conceptual stages, which aligns with 
 
 The guiding principle is to process and quality-control samples individually before merging, minimizing memory usage and computational overhead during integration.
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 📁 Data Import
 
@@ -38,13 +38,13 @@ The collection metadata from HCA is used to:
 
 Proving crucial in the harvesting and organization of the data.
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ### 2. Downloading Data
 
 All raw data are downloaded via the HCA UI and stored locally.
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ### 3. File Organization (UNIX)
 
@@ -63,7 +63,7 @@ Where matrix denotes the scRNA count matrix, features and barcodes (cells) provi
 
 Hence, each directory corresponds to a single biological sample.
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 🔧 Processing & Integration (R / RStudio)
 
@@ -81,7 +81,7 @@ This function:
 	•	Constructs Seurat objects
 	•	Performs modality-specific preprocessing
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 🧪 Sample-Level Workflow
 
@@ -97,7 +97,7 @@ For each sample:
 	•	Performed before merging
 	•	Filtered objects are saved back to disk
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 🔗 Merging Strategy
 
@@ -111,7 +111,7 @@ Rationale
 Performing QC before merging significantly reduces computational load and memory usage during integration, especially for large multi-sample datasets.
 
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 📦 Dependencies
 
@@ -129,7 +129,7 @@ System requirements:
 	•	R (≥ 4.2 recommended)
 	•	RStudio (optional but recommended)
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 🚧 Current Status
 	•	✅ Data import and organization
@@ -137,7 +137,7 @@ System requirements:
 	•	🔄 QC parameter tuning (in progress)
 	•	⏳ Downstream integration and visualization (planned)
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 🤝 Contributing
 
@@ -150,7 +150,7 @@ The collaborators are:
 	•	s215092
 	•	s215045
 
-⸻
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
 
 ## 📬 Contact
 
