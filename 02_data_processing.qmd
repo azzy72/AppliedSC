@@ -25,42 +25,69 @@ library(Matrix)
 ```{r}
 
 
-sample_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/"
+#sample_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/"
 
 #reading the seruat objects
-B006 <- readRDS(str_c(sample_path, "B006_seurat.rds"))
-B008 <- readRDS(str_c(sample_path, "B008_seurat.rds"))
-B010 <- readRDS(str_c(sample_path, "B010_seurat.rds"))
-B011 <- readRDS(str_c(sample_path, "B011_seurat.rds"))
-B012 <- readRDS(str_c(sample_path, "B012_seurat.rds"))
+# B006 <- readRDS(str_c(sample_path, "B006_seurat.rds"))
+# B008 <- readRDS(str_c(sample_path, "B008_seurat.rds"))
+# B010 <- readRDS(str_c(sample_path, "B010_seurat.rds"))
+# B011 <- readRDS(str_c(sample_path, "B011_seurat.rds"))
+# B012 <- readRDS(str_c(sample_path, "B012_seurat.rds"))
 
 
-
-B006$donor <- "B006"
-B008$donor <- "B008"
-B010$donor <- "B010"
-B011$donor <- "B011"
-B012$donor <- "B012"
-
-
-EC <- merge(
-  x = B006,
-  y = list(B008, B010, B011, B012),
-  add.cell.ids = c("B006","B008","B010","B011", "B012"),
-  project = "AllDonors"
-)
+# Adding meta data of each donor to thei seurat object
+# B006$donor <- "B006"
+# B008$donor <- "B008"
+# B010$donor <- "B010"
+# B011$donor <- "B011"
+# B012$donor <- "B012"
 
 
-# checking if meta data was perserved
-table(EC$donor)
+# EC <- merge(
+#   x = B006,
+#   y = list(B008, B010, B011, B012),
+#   add.cell.ids = c("B006","B008","B010","B011", "B012"),
+#   project = "AllDonors"
+# )
+# 
+# 
+# # checking if meta data was perserved
+# table(EC$donor)
+# 
+# # Joing layers so count matrix and such is pooled
+# EC <- JoinLayers(EC)
+# 
+# # Saving the seurat 
+# saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_merged_seurat.rds")
+# 
+# dim(EC) # dim before subsetting, 545083 3569104
 
-# Joing layers so count matrix and such is pooled
-EC <- JoinLayers(EC)
+```
 
-# Saving the seurat 
-saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_seurat.rds")
+## Loading merged seurat
 
-dim(EC) # dim before subsetting, 545083 3569104
+```{r}
+
+EC <- readRDS('/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_merged_seurat.rds')
+```
+
+Removing spatial information:
+
+```{r}
+# saving counts
+counts <- GetAssayData(EC, layer= 'counts')
+
+#Saving spatial 
+spatial_genes <-  rownames(EC)[grepl(":", rownames(EC))]
+
+#adding spatial genes:
+#EC <- EC[spatial_genes, ] 
+
+#Remving spatial information
+keep_genes <- rownames(EC)[!grepl(":", rownames(EC))]
+
+# Subset the Seurat object
+EC <- EC[keep_genes, ] 
 ```
 
 # QC of the data
@@ -76,13 +103,23 @@ EC[["percent.ribo"]] <- PercentageFeatureSet(EC, pattern = "^RPS|^RPL|^rps|^rpl"
 
 ```
 
+Converting NA to 0:
+
 ```{r}
+features <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo")
+
 for (f in features) {
-  x <- EC[[f]][,1]
-  x[is.na(x) | is.infinite(x)] <- 0
-  EC[[f]] <- x
+  if (f %in% colnames(EC@meta.data)) {          # check it exists
+    x <- EC@meta.data[, f]                       # extract as vector
+    x[is.na(x) | is.infinite(x)] <- 0            # replace NA/Inf with 0
+    EC@meta.data[, f] <- x                        # write back
+  } else {
+    warning(paste("Feature not found in metadata:", f))
+  }
 }
 ```
+
+Checking for no Na values for QC metric
 
 ```{r}
 colSums(is.na(EC@meta.data[, c(
@@ -93,14 +130,7 @@ colSums(is.na(EC@meta.data[, c(
 )]))
 ```
 
-```{r}
-# Mito genes (adjust pattern if needed)
-EC[["percent.mt"]] <- PercentageFeatureSet(EC, pattern = "^MT-")
-
-# Ribosomal genes
-EC[["percent.ribo"]] <- PercentageFeatureSet(EC, pattern = "^RPS|^RPL")
-
-```
+Making QC metric
 
 ```{r}
 
@@ -144,5 +174,14 @@ dim(EC) # dim subsetting
 # Normalization, variables features and scaling
 
 ```{r}
+
+```
+
+# Saving final seurat object
+
+```{r}
+
+#saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_preproccessed_seurat.rds")
+
 
 ```
