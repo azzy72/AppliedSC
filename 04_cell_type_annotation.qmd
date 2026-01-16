@@ -3,3 +3,24 @@ title: "04_cell_type_annotation"
 format: html
 ---
 
+### Cell clustering
+
+For cell type annotation, we will perform clustering first to gain insight into the local relationships of cell types.
+
+```{r}
+# Identify neighbors based on the CCA integration and perform clusering
+# REMEMBER TO UPDATE PCS
+obj.cca <- FindNeighbors(obj,
+                         dims = 1:14, 
+                         reduction = "CCA_Integration", 
+                         graph.name = "CCA_snn")
+
+obj.cca <- FindClusters(obj.cca, 
+                        resolution = c(0.4, 0.6, 0.8, 1.0, 1.2), 
+                        algorithm = 4, 
+                        graph.name = "CCA_snn")
+```
+
+For the clustering, we will test different resolutions and determine the lowest resolution that clusters the cell types.
+
+### Clustering optimization
