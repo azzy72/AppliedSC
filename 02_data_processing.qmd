@@ -304,15 +304,21 @@ ggplot(plot_data, aes(x = Sample, y = PercentKept, fill = Sample)) +
 
 # Normalization, variables features and scaling
 
-```{r}
+Now we're left with a filtered EC object based on QC cutoffs then subsetting for computational feasibility
 
+```{r}
+#| warning: false
+#| message: false
+
+EC <- NormalizeData(EC)
+EC <- FindVariableFeatures(EC)
+EC <- ScaleData(EC)
+EC <- RunPCA(EC)
 ```
 
-# Saving final seurat object
+# Saving final Seurat object
 
 ```{r}
-
-#saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_preproccessed_seurat.rds")
-
-
+# Saving with a simple name "EC"
+saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC.rds")
 ```
