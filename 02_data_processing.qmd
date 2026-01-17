@@ -87,7 +87,7 @@ spatial_genes <-  rownames(EC)[grepl(":", rownames(EC))]
 keep_genes <- rownames(EC)[!grepl(":", rownames(EC))]
 
 # Subset the Seurat object
-EC <- EC[keep_genes, ] 
+EC <- subset(EC, features = keep_genes) #asbj: subset function was more safe than using []
 ```
 
 # QC of the data
@@ -119,7 +119,7 @@ for (f in features) {
 }
 ```
 
-Checking for no Na values for QC metric
+Checking for no Na values for QC metric, should contain only zeros
 
 ```{r}
 colSums(is.na(EC@meta.data[, c(
@@ -130,7 +130,7 @@ colSums(is.na(EC@meta.data[, c(
 )]))
 ```
 
-Making QC metric
+Making QC metric ViolinPlot
 
 ```{r}
 
@@ -146,7 +146,87 @@ p <- VlnPlot(EC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "perce
 p
 ```
 
+Proposed QC cutoffs:
+
+-   nFeature_RNA \<35,000
+
+-   nCount_RNA \< 1e\^5 = 10,000
+
+-   percent.mt: 20% = 0.2 (A lot of cells are above this threshold, going lower would remove a lot of the data)
+
+-   percent.ribo: 50%
+
+### Implementing QC Filtering
+
+```{r}
+cells_before <- ncol(EC)
+
+EC_filt <- subset(
+  x = EC,
+  subset = nFeature_RNA < 35000 & 
+           nCount_RNA < 100000 &
+           percent.mt < 20 &
+           percent.ribo < 50
+)
+
+cells_after <- ncol(EC_filt)
+cells_lost <- cells_before - cells_after
+
+print(paste("Cells lost:", cells_lost))
+print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
+```
+
+Distribution of cells lost per sample
+
+```{r}
+table(EC$orig.ident)
+table(EC_filt$orig.ident)
+```
+
+```{r}
+# 1. Create a data frame of counts
+counts_before <- as.data.frame(table(EC$orig.ident))
+counts_after <- as.data.frame(table(EC_filt$orig.ident))
+
+# 2. Merge them together
+plot_data <- merge(counts_before, counts_after, by = "Var1")
+colnames(plot_data) <- c("Sample", "Before", "After")
+
+# 3. Reshape for ggplot
+plot_data_long <- pivot_longer(plot_data, cols = c("Before", "After"), 
+                               names_to = "Status", values_to = "CellCount")
+
+# 4. Create the plot
+ggplot(plot_data_long, aes(x = Sample, y = CellCount, fill = Status)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "Cell Counts Before vs. After Filtering",
+       y = "Number of Cells",
+       x = "Sample ID") +
+  scale_fill_manual(values = c("Before" = "grey80", "After" = "steelblue"))
+```
+
+```{r}
+# Calculate percentage kept
+plot_data$PercentKept <- (plot_data$After / plot_data$Before) * 100
+
+ggplot(plot_data, aes(x = Sample, y = PercentKept, fill = Sample)) +
+  geom_bar(stat = "identity") +
+  # Add the labels on top of the bars
+  geom_text(aes(label = paste0(round(PercentKept, 1), "%")), 
+            vjust = -0.5,             # Move text slightly above the top of the bar
+            size = 3) +               # Adjust font size
+  theme_minimal() +
+  labs(title = "Retention Rate per Sample",
+       y = "% of Cells Remaining",
+       x = "Sample ID") +
+  ylim(0, 110) +                      # Increase y-limit slightly to give space for labels
+  scale_fill_brewer(palette = "Set2") # Optional: nicer color palette
+```
+
 ## Doublets investigation
+
+Checking for doublets without filtering
 
 ```{r}
 
@@ -160,15 +240,66 @@ set.seed(123) # seed for reproducibility
 
 cells.use <- unlist(
   lapply(
-    split(Cells(EC), EC$donor),
+    split(Cells(EC_filt), EC_filt$donor),
     function(x) sample(x, 8000)
   )
 )
 
-EC <- subset(EC, cells = cells.use)
+EC <- subset(EC_filt, cells = cells.use)
 
 dim(EC) # dim subsetting
+```
 
+Recapping the subsetting of data:
+
+```{r}
+cells_final <- ncol(EC)
+counts_final <- as.data.frame(table(EC$orig.ident))
+cells_lost_final <- cells_before - cells_final
+
+print(paste("Cells lost (Final):", cells_lost_final))
+print(paste("Final percentage lost:", round((cells_lost_final/cells_before)*100, 2), "%"))
+```
+
+Base count lost plot
+
+```{r}
+# 2. Merge them together
+plot_data <- merge(counts_before, counts_final, by = "Var1")
+colnames(plot_data) <- c("Sample", "Before", "After")
+
+# 3. Reshape for ggplot
+plot_data_long <- pivot_longer(plot_data, cols = c("Before", "After"), 
+                               names_to = "Status", values_to = "CellCount")
+
+# 4. Create the plot
+ggplot(plot_data_long, aes(x = Sample, y = CellCount, fill = Status)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "Cell Counts Before vs. After Filtering",
+       y = "Number of Cells",
+       x = "Sample ID") +
+  scale_fill_manual(values = c("Before" = "grey80", "After" = "steelblue"))
+```
+
+Percentage lost plot
+
+```{r}
+# Calculate percentage kept
+plot_data$PercentKept <- (plot_data$After / plot_data$Before) * 100
+
+ggplot(plot_data, aes(x = Sample, y = PercentKept, fill = Sample)) +
+  geom_bar(stat = "identity") +
+  # Add the labels on top of the bars
+  geom_text(aes(label = paste0(round(PercentKept, 1), "%")), 
+            vjust = -0.5,             # Move text slightly above the top of the bar
+            size = 3) +               # Adjust font size
+  theme_minimal() +
+  labs(title = "Retention Rate per Sample",
+       y = "% of Cells Remaining",
+       x = "Sample ID") +
+  ylim(0, 110) +                      # Increase y-limit slightly to give space for labels
+  scale_fill_brewer(palette = "Set2") # Optional: nicer color palette
 ```
 
 # Normalization, variables features and scaling
