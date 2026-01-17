@@ -21,11 +21,11 @@ source("./functions.R")
 ```
 
 ```{r}
-B012_seurat <-rna_atac_integration_signac("B012")
+B006_seurat <-rna_atac_integration_signac("B006")
 ```
 
 ```{r}
-saveRDS(B012_seurat, file="./B012_seurat.rds")
+saveRDS(B006_seurat, file="./B006_seurat.rds")
 ```
 
 ## Running all and saving rds.
@@ -54,7 +54,7 @@ for (prefix in prefixes) {
 ############################################
 ## Paths and project info
 ############################################
-proj_prefix <- "B012"
+proj_prefix <- "B006"
 message(str_c("Starting ",proj_prefix))
 
 intestine_path <- "/home/projects/exam_2026_22102/group2/intestine_data/"
@@ -94,6 +94,21 @@ seurat_obj <- CreateSeuratObject(
   counts = counts,
   project = proj_prefix
 )
+```
+
+```{r}
+# Extract the gene names
+gene_names <- counts@Dimnames[[1]]
+
+# Find which names are duplicates
+dup_logic <- duplicated(gene_names)
+duplicate_genes <- gene_names[dup_logic]
+
+# Count how many duplicates there are
+length(duplicate_genes)
+
+# See the actual names of the duplicates
+unique(duplicate_genes)
 ```
 
 ```{r}
