@@ -86,7 +86,9 @@ spatial_genes <-  rownames(EC)[grepl(":", rownames(EC))]
 keep_genes <- rownames(EC)[!grepl(":", rownames(EC))]
 
 # Subset the Seurat object
-EC <- subset(EC, features = keep_genes) #asbj: subset function was more safe than using []
+EC[["RNA"]] <- subset(EC[["RNA"]], features = keep_genes)
+
+#EC <- subset(EC, features = keep_genes) #asbj: subset function was more safe than using []
 ```
 
 # QC of the data
@@ -160,12 +162,24 @@ cells_before <- ncol(EC)
 counts_before <- as.data.frame(table(EC$orig.ident))
 dist_sample_table_before <- table(EC$orig.ident)
 
-EC <- subset(
-  x = EC,
-  subset = nFeature_RNA > 200 &
-           nFeature_RNA < 35000 &
-           percent.mt < 8 &
-           percent.ribo < 50)
+cells_to_keep <- WhichCells(EC, expression = 
+                              nFeature_RNA > 200 &
+                              nFeature_RNA < 35000 &
+                              percent.mt < 8 &
+                              percent.ribo < 50)
+
+# intersect with ATAC cells
+cells_to_keep <- intersect(cells_to_keep, colnames(EC[["ATAC"]]))
+
+# subset
+EC <- subset(EC, cells = cells_to_keep)
+
+# EC <- subset(
+#   x = EC,
+#   subset = nFeature_RNA > 200 &
+#            nFeature_RNA < 35000 &
+#            percent.mt < 8 &
+#            percent.ribo < 50)
 
 cells_after <- ncol(EC)
 cells_lost <- cells_before - cells_after
@@ -175,8 +189,6 @@ dist_sample_table_after <- table(EC$orig.ident)
 print(paste("Cells lost:", cells_lost))
 print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
 ```
-
-![](images/clipboard-9133593.png)
 
 Distribution of cells lost per sample
 
