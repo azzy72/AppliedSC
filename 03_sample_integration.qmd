@@ -7,15 +7,16 @@ format: html
 # Load libraries
 #| echo: false
 suppressPackageStartupMessages({
-library(Seurat)
-library(ggplot2)
-library(patchwork)
-library(dplyr)
-library(harmony)
-library(tidyr)
-library(multtest)
-library(metap)
-library(tibble)
+  library(Seurat)
+  library(Signac)
+  library(ggplot2)
+  library(patchwork)
+  library(dplyr)
+  library(harmony)
+  library(tidyr)
+  library(multtest)
+  library(metap)
+  library(tibble)
 })
 
 source("./paths.R")
@@ -30,7 +31,7 @@ For sample integration it is our aim to perform horizontal integration across do
 
 ```{r}
 # Initial look at clustering (before integration)
-DimPlot(EC, reduction="umap", group.by="X")
+DimPlot(EC, reduction="umap", group.by = "donor")
 ```
 
 This plot reveals that....
@@ -39,8 +40,7 @@ Before any integration can take place, we split the data sets into five Seurat O
 
 ```{r}
 # Split the data
-# REMEMBER to update 'condition' if needed
-EC[["RNA"]] <- split(EC[["RNA"]], f = EC$condition)
+EC[["RNA"]] <- split(EC[["RNA"]], f = EC$donor)
 ```
 
 ```{r}
@@ -65,7 +65,7 @@ EC <- IntegrateLayers(object = EC,
                        method = CCAIntegration,
                        orig.reduction = "pca", 
                        new.reduction = "CCA_Integration",
-                       dims = 1:14, 
+                       dims = 1:15, 
                        verbose = FALSE
 )
 
@@ -79,15 +79,28 @@ After integration, we will run UMAP reduction again and visualize the new cluste
 # Run UMAP
 # REMEMBER TO UPDATE PCS
 EC <- RunUMAP(EC, 
-               dims = 1:14, 
+               dims = 1:15, 
                reduction = "CCA_Integration", 
                reduction.name = "umap_cca")
 ```
 
+### Visualize integrated clusters
+
 ```{r}
-# REMEMBER to update 'condition' if needed
-p1 <- DimPlot(EC, reduction = 'umap', group.by = 'condition') + ggtitle("UMAP raw_data")
-p2 <- DimPlot(EC, reduction = "umap_cca", group.by = "condition") + ggtitle("UMAP CCA")
+p1 <- DimPlot(EC, reduction = 'umap', group.by = 'donor') + ggtitle("UMAP raw_data")
+p2 <- DimPlot(EC, reduction = "umap_cca", group.by = "donor") + ggtitle("UMAP CCA")
 
 wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
+```
+
+```{r}
+p2
+```
+
+# Saving final Seurat object
+
+```{r}
+# Saving with a simple name "EC"
+# The EC now contain integrated data along with a new reduction; umap_cca
+saveRDS(EC, file = paste0(EC_seurats_path, "03_EC.rds"))
 ```
