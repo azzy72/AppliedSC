@@ -16,6 +16,8 @@ library(tidyr)
 #library(metap)
 library(tibble)
 library(Matrix)
+library(scDblFinder)
+library(scater)
 })
 
 source("./paths.R")
@@ -147,9 +149,7 @@ Proposed QC cutoffs:
 
 -   nFeature_RNA 200\< x \<35,000
 
--   nCount_RNA \< 1e\^5 = 10,000
-
--   percent.mt: 5% = 0.05 (A lot of cells are above this threshold, going lower would remove a lot of the data)
+-   percent.mt: 8% = 0.08, as we do expect a bit higher metabolic activity (see litt. reference in pp)
 
 -   percent.ribo: 50%
 
@@ -164,7 +164,7 @@ EC <- subset(
   x = EC,
   subset = nFeature_RNA > 200 &
            nFeature_RNA < 35000 &
-           percent.mt => 8 &
+           percent.mt < 8 &
            percent.ribo < 50)
 
 cells_after <- ncol(EC)
@@ -175,6 +175,8 @@ dist_sample_table_after <- table(EC$orig.ident)
 print(paste("Cells lost:", cells_lost))
 print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
 ```
+
+![](images/clipboard-9133593.png)
 
 Distribution of cells lost per sample
 
@@ -220,34 +222,18 @@ ggplot(plot_data, aes(x = Sample, y = PercentKept, fill = Sample)) +
   scale_fill_brewer(palette = "Set2") # Optional: nicer color palette
 ```
 
-## Doublets investigation
-
-Checking for doublets without filtering
-
-```{r}
-
-# converting to sce element
-sce_EC <- as.SingleCellExperiment(EC)
-
-# perorming doublet finder 
-set.seed(42)
-sce.dbl <- scDblFinder(sce,samples="sample", clusters=colLabels(sce))
-
-```
-
-```{r}
-# plot UMAP of potential doublets
-
-plotUMAP(sce.dbl, colour_by="scDblFinder.score")
-```
-
-```{r}
-# Finding seurat class for doublet
-
-table(sce.dbl$scDblFinder.class)
-```
-
 # Random subsetting data
+
+```{r}
+cells.use <- unlist(
+  lapply(
+    split(intersect(Cells(EC), colnames(EC[["ATAC"]])), EC$donor),
+    function(x) sample(x, 8000)
+  )
+)
+EC <- subset(EC, cells = cells.use)
+
+```
 
 ```{r}
 
@@ -344,6 +330,41 @@ EC <- FindNeighbors(EC, dims = 1:9)
 EC <- FindClusters(EC, algorithm = 4, random.seed = 40)
 EC <- RunUMAP(EC, dims=1:9)
 ```
+
+## Doublets investigation
+
+Checking for doublets without filtering
+
+```{r}
+# converting to sce element  
+sce_EC <- as.SingleCellExperiment(EC)    
+# perorming doublet finder  
+set.seed(42) 
+sce_EC.dbl <- scDblFinder(sce_EC ,samples="donor", clusters=colLabels(sce_EC)) 
+```
+
+```{r}
+sce_EC.dbl <- logNormCounts(sce_EC.dbl)  
+# Check that the assay exists now 
+assayNames(sce_EC.dbl)
+```
+
+```{r}
+# plot UMAP of potential doublets 
+sce_EC.dbl <- runUMAP(sce_EC.dbl, exprs_values = "logcounts")  
+plotUMAP(sce_EC.dbl, colour_by="scDblFinder.score")
+```
+
+```{r}
+# Finding seurat class for doublet  
+table(sce_EC.dbl$scDblFinder.class)
+```
+
+```{r}
+plotColData(sce_EC.dbl, y="scDblFinder.score", colour_by=("scDblFinder.class"))
+```
+
+# 
 
 # Saving final Seurat object
 
