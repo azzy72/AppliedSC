@@ -23,6 +23,7 @@ source("./paths.R")
 #source("./functions.R")
 
 EC <- readRDS(paste0(EC_seurats_path, "02_EC.rds"))
+DefaultAssay(EC) <- "RNA"
 ```
 
 ## Before integration
@@ -77,7 +78,6 @@ After integration, we will run UMAP reduction again and visualize the new cluste
 
 ```{r}
 # Run UMAP
-# REMEMBER TO UPDATE PCS
 EC <- RunUMAP(EC, 
                dims = 1:15, 
                reduction = "CCA_Integration", 
@@ -87,7 +87,7 @@ EC <- RunUMAP(EC,
 ### Visualize integrated clusters
 
 ```{r}
-p1 <- DimPlot(EC, reduction = 'umap', group.by = 'donor') + ggtitle("UMAP raw_data")
+p1 <- DimPlot(EC, reduction = 'UMAP', group.by = 'donor') + ggtitle("UMAP raw_data")
 p2 <- DimPlot(EC, reduction = "umap_cca", group.by = "donor") + ggtitle("UMAP CCA")
 
 wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
@@ -95,6 +95,31 @@ wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
 
 ```{r}
 p2
+```
+
+### Tile Visualization
+
+```{r}
+df <- data.frame(
+  cluster = EC@meta.data$RNA_snn_res.0.8,
+  donor = EC@meta.data$donor
+)
+
+summary_df <- df %>%
+  group_by(cluster, donor) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  group_by(cluster) %>%
+  mutate(fraction = count / sum(count))
+```
+
+```{r}
+ggplot(summary_df, aes(x = donor, y = cluster, fill = fraction)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(fraction, 2)), color = "black", size = 3) + 
+  scale_fill_gradient(low = "white", high = "red") +
+  theme_minimal() +
+  labs(x = "Sample", y = "Cluster", fill = "Fraction") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 # Saving final Seurat object
