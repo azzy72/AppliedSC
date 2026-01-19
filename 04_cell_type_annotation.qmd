@@ -19,8 +19,6 @@ library(SingleR)
 })
 ```
 
-
-
 ### Cell clustering
 
 For cell type annotation, we will perform clustering first to gain insight into the local relationships of cell types.
@@ -129,9 +127,6 @@ ref <- ref[,grepl('DC|B_cell|Neutrophils|T_cells|Monocyte|Erythroblast|
                  Macrophage|NK_cell|Platelets|Myelocyte', ref$label.main)]
 unique(ref$label.main)
 ```
-
-
-
 
 ```{r}
 # Call upon the reference database
