@@ -17,13 +17,20 @@ library(multtest)
 library(metap)
 library(tibble)
 })
+
+source("./paths.R")
+#source("./functions.R")
+
+EC <- readRDS(paste0(EC_seurats_path, "02_EC.rds"))
 ```
 
-For sample integration it is our aim to perform horizontal integration across donors. This enables us to compare donors and capture biological variation (instead of technical).
+## Before integration
+
+For sample integration it is our aim to perform horizontal integration across donors. This enables us to compare donors and capture biological variation (instead of technical). We'll take a look at the UMAP reduction to get a grasp of the cluster formation before integration.
 
 ```{r}
 # Initial look at clustering (before integration)
-DimPlot(obj, reduction="umap", group.by="X")
+DimPlot(EC, reduction="umap", group.by="X")
 ```
 
 This plot reveals that....
@@ -33,20 +40,20 @@ Before any integration can take place, we split the data sets into five Seurat O
 ```{r}
 # Split the data
 # REMEMBER to update 'condition' if needed
-obj[["RNA"]] <- split(obj[["RNA"]], f = obj$condition)
+EC[["RNA"]] <- split(EC[["RNA"]], f = EC$condition)
 ```
 
 ```{r}
-obj <- NormalizeData(obj)
-obj <- FindVariableFeatures(obj)
-obj <- ScaleData(obj)
-obj <- RunPCA(obj)
+EC <- NormalizeData(EC)
+EC <- FindVariableFeatures(EC)
+EC <- ScaleData(EC)
+EC <- RunPCA(EC)
 ```
 
 To determine the number PCs to use, we plot and ElbowPlot()
 
 ```{r}
-ElbowPlot(obj)
+ElbowPlot(EC)
 ```
 
 **Integrate layers:**
@@ -54,7 +61,7 @@ ElbowPlot(obj)
 ```{r}
 # Anchor-based CCA integration
 # REMEMBER TO DETERMINE PCS
-obj <- IntegrateLayers(object = obj, 
+EC <- IntegrateLayers(object = EC, 
                        method = CCAIntegration,
                        orig.reduction = "pca", 
                        new.reduction = "CCA_Integration",
@@ -63,7 +70,7 @@ obj <- IntegrateLayers(object = obj,
 )
 
 # Re-join the split layers
-obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
+EC[["RNA"]] <- JoinLayers(EC[["RNA"]])
 ```
 
 After integration, we will run UMAP reduction again and visualize the new clustering.
@@ -71,7 +78,7 @@ After integration, we will run UMAP reduction again and visualize the new cluste
 ```{r}
 # Run UMAP
 # REMEMBER TO UPDATE PCS
-obj <- RunUMAP(obj, 
+EC <- RunUMAP(EC, 
                dims = 1:14, 
                reduction = "CCA_Integration", 
                reduction.name = "umap_cca")
@@ -79,8 +86,8 @@ obj <- RunUMAP(obj,
 
 ```{r}
 # REMEMBER to update 'condition' if needed
-p1 <- DimPlot(obj, reduction = 'umap', group.by = 'condition') + ggtitle("UMAP raw_data")
-p2 <- DimPlot(obj, reduction = "umap_cca", group.by = "condition") + ggtitle("UMAP CCA")
+p1 <- DimPlot(EC, reduction = 'umap', group.by = 'condition') + ggtitle("UMAP raw_data")
+p2 <- DimPlot(EC, reduction = "umap_cca", group.by = "condition") + ggtitle("UMAP CCA")
 
 wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
 ```

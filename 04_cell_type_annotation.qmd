@@ -17,9 +17,10 @@ library(tibble)
 library(clustree)
 library(SingleR)
 })
+
+source("./paths.R")
+#source("./functions.R")
 ```
-
-
 
 ### Cell clustering
 
@@ -129,9 +130,6 @@ ref <- ref[,grepl('DC|B_cell|Neutrophils|T_cells|Monocyte|Erythroblast|
                  Macrophage|NK_cell|Platelets|Myelocyte', ref$label.main)]
 unique(ref$label.main)
 ```
-
-
-
 
 ```{r}
 # Call upon the reference database

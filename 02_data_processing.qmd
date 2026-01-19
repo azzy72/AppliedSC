@@ -4,7 +4,6 @@ format: html
 ---
 
 ```{r}
-
 suppressPackageStartupMessages({
 library(Seurat)
 library(ggplot2)
@@ -13,26 +12,25 @@ library(dplyr)
 library(tidyverse)
 library(harmony)
 library(tidyr)
-library(multtest)
-library(metap)
+#library(multtest)
+#library(metap)
 library(tibble)
 library(Matrix)
 })
+
+source("./paths.R")
+#source("./functions.R")
 ```
 
 ## Load and combine sample data
 
 ```{r}
-
-
-#sample_path <- "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/"
-
 #reading the seruat objects
-# B006 <- readRDS(str_c(sample_path, "B006_seurat.rds"))
-# B008 <- readRDS(str_c(sample_path, "B008_seurat.rds"))
-# B010 <- readRDS(str_c(sample_path, "B010_seurat.rds"))
-# B011 <- readRDS(str_c(sample_path, "B011_seurat.rds"))
-# B012 <- readRDS(str_c(sample_path, "B012_seurat.rds"))
+# B006 <- readRDS(str_c(sample_seurat_path, "B006_seurat.rds"))
+# B008 <- readRDS(str_c(sample_seurat_path, "B008_seurat.rds"))
+# B010 <- readRDS(str_c(sample_seurat_path, "B010_seurat.rds"))
+# B011 <- readRDS(str_c(sample_seurat_path, "B011_seurat.rds"))
+# B012 <- readRDS(str_c(sample_seurat_path, "B012_seurat.rds"))
 
 
 # Adding meta data of each donor to thei seurat object
@@ -58,7 +56,7 @@ library(Matrix)
 # EC <- JoinLayers(EC)
 # 
 # # Saving the seurat 
-# saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_merged_seurat.rds")
+# saveRDS(EC, file = paste0(EC_seurats_path, "EC_merged_seurat.rds"))
 # 
 # dim(EC) # dim before subsetting, 545083 3569104
 
@@ -67,8 +65,7 @@ library(Matrix)
 ## Loading merged seurat
 
 ```{r}
-
-EC <- readRDS('/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC_merged_seurat.rds')
+EC <- readRDS(paste0(EC_seurats_path, "EC_merged_seurat.rds"))
 ```
 
 Removing spatial information:
@@ -160,8 +157,10 @@ Proposed QC cutoffs:
 
 ```{r}
 cells_before <- ncol(EC)
+counts_before <- as.data.frame(table(EC$orig.ident))
+dist_sample_table_before <- table(EC$orig.ident)
 
-EC_filt <- subset(
+EC <- subset(
   x = EC,
   subset = nFeature_RNA < 35000 & 
            nCount_RNA < 100000 &
@@ -169,8 +168,10 @@ EC_filt <- subset(
            percent.ribo < 50
 )
 
-cells_after <- ncol(EC_filt)
+cells_after <- ncol(EC)
 cells_lost <- cells_before - cells_after
+counts_after <- as.data.frame(table(EC$orig.ident))
+dist_sample_table_after <- table(EC$orig.ident)
 
 print(paste("Cells lost:", cells_lost))
 print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
@@ -179,15 +180,11 @@ print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
 Distribution of cells lost per sample
 
 ```{r}
-table(EC$orig.ident)
-table(EC_filt$orig.ident)
+print(dist_sample_table_before)
+print(dist_sample_table_after)
 ```
 
 ```{r}
-# 1. Create a data frame of counts
-counts_before <- as.data.frame(table(EC$orig.ident))
-counts_after <- as.data.frame(table(EC_filt$orig.ident))
-
 # 2. Merge them together
 plot_data <- merge(counts_before, counts_after, by = "Var1")
 colnames(plot_data) <- c("Sample", "Before", "After")
@@ -240,12 +237,12 @@ set.seed(123) # seed for reproducibility
 
 cells.use <- unlist(
   lapply(
-    split(Cells(EC_filt), EC_filt$donor),
+    split(Cells(EC), EC$donor),
     function(x) sample(x, 8000)
   )
 )
 
-EC <- subset(EC_filt, cells = cells.use)
+EC <- subset(EC, cells = cells.use)
 
 dim(EC) # dim subsetting
 ```
@@ -316,9 +313,23 @@ EC <- ScaleData(EC)
 EC <- RunPCA(EC)
 ```
 
+Detecting viable PCs with Elbowplot
+
+```{r}
+ElbowPlot(EC) # 1:9 looks good
+```
+
+Running and storing naive UMAP embedding
+
+```{r}
+EC <- FindNeighbors(EC, dims = 1:9)
+EC <- FindClusters(EC, algorithm = 4, random.seed = 40)
+EC <- RunUMAP(EC, dims=1:9)
+```
+
 # Saving final Seurat object
 
 ```{r}
 # Saving with a simple name "EC"
-saveRDS(EC, file = "/home/projects/exam_2026_22102/group2/intestine_data/sample_seurats/EC.rds")
+saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
 ```
