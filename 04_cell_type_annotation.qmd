@@ -24,6 +24,8 @@ source("./paths.R")
 EC <- readRDS(paste0(EC_seurats_path, "03_EC.rds"))
 ```
 
+#Maunal Cell annotation
+
 ### Cell clustering
 
 For cell type annotation, we will perform clustering first to gain insight into the local relationships of cell types.
