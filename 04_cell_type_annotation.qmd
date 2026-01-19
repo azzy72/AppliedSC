@@ -62,7 +62,7 @@ Cell type assignment by manual markers requires prior knowledge about characteri
 
 ```{r}
 # Visualize gene expression
-FeaturePlot(obj.cca, 
+FeaturePlot(EC.cca, 
             reduction = "umap_cca", 
             features = c("XXX"), 
             order = TRUE,
