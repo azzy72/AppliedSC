@@ -237,6 +237,7 @@ ggplot(plot_data, aes(x = Sample, y = PercentKept, fill = Sample)) +
 # Random subsetting data
 
 ```{r}
+set.seed(123) # seed for reproducibility
 cells.use <- unlist(
   lapply(
     split(intersect(Cells(EC), colnames(EC[["ATAC"]])), EC$donor),
@@ -245,22 +246,6 @@ cells.use <- unlist(
 )
 EC <- subset(EC, cells = cells.use)
 
-```
-
-```{r}
-
-set.seed(123) # seed for reproducibility
-
-cells.use <- unlist(
-  lapply(
-    split(Cells(EC), EC$donor),
-    function(x) sample(x, 8000)
-  )
-)
-
-EC <- subset(EC, cells = cells.use)
-
-dim(EC) # dim subsetting
 ```
 
 Recapping the subsetting of data:
