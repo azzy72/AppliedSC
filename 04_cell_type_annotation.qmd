@@ -32,29 +32,65 @@ For cell type annotation, we will perform clustering first to gain insight into 
 
 ```{r}
 # Identify neighbors based on the CCA integration and perform clusering
-EC.cca <- FindNeighbors(EC,
+EC <- FindNeighbors(EC,
                          dims = 1:15, 
-                         reduction = "CCA_Integration", 
-                         graph.name = "CCA_snn")
+                         reduction = "harmony_Integration", 
+                         graph.name = "harmony_snn")
 
-EC.cca <- FindClusters(EC.cca, 
-                        resolution = c(0.4, 0.6, 0.8, 1.0, 1.2), 
-                        algorithm = 4, 
-                        graph.name = "CCA_snn")
+EC <- FindClusters(EC, 
+                        resolution = c(0.4,0.6,0.8,1.0,1.2), 
+                        algorithm = 4,
+                        random.seed = 1,
+                        graph.name = "harmony_snn")
 ```
+
 
 ### Clustering optimization
 
 Clustering optimization is necessary to come to a clustering of cell types that we can confidently continue our analysis on. For optimization, we will test different resolutions (k) and determine the lowest resolution that provides a good clustering. To investigate this, we will create a clustree.
 
 ```{r}
-clustree(EC.cca, prefix = "CCA_snn_res.")
+clustree(EC, prefix = "harmony_snn_res.")
 ```
 
 ```{r}
 # Set Idents to the resolution that was best
-Idents(EC.cca) <- "CCA_snn_res.X.X" 
+Idents(EC) <- "harmony_snn_res.0.8" 
 ```
+
+
+#Tile plot
+
+```{r}
+
+
+df <- data.frame(
+  cluster = EC@meta.data$harmony_snn_res.0.8,
+  donor = EC@meta.data$donor
+)
+
+summary_df <- df %>%
+  group_by(cluster, donor) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  group_by(cluster) %>%
+  mutate(fraction = count / sum(count))
+
+```
+
+
+```{r}
+ggplot(summary_df, aes(x = donor, y = cluster, fill = fraction)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(fraction, 2)), color = "black", size = 3) + 
+  scale_fill_gradient(low = "white", high = "red") +
+  theme_minimal() +
+  labs(x = "Donor", y = "Cluster", fill = "Fraction") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
 
 ### Cell type assignment
 
