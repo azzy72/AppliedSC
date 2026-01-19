@@ -94,6 +94,26 @@ ggplot(summary_df, aes(x = donor, y = cluster, fill = fraction)) +
 
 ### Cell type assignment
 
+
+```{r}
+
+# Definér hvilke donorer der er Disease
+disease_donors <- c("B008", "B011")
+
+# Opret ny metadata-kolonne
+EC$Disease_status <- ifelse(
+  EC$donor %in% disease_donors,
+  "Disease",
+  "Healthy"
+)
+
+# Tjek resultatet
+table(EC$Disease_status, EC$donor)
+
+
+```
+
+
 **Manual marker cell type assignment**
 
 It is also possible to utilize `FindConsveredMarkers()` and `FindMarkers()` for identifying genes that stand out in a cluster.
@@ -103,7 +123,7 @@ It is also possible to utilize `FindConsveredMarkers()` and `FindMarkers()` for 
 # USE IF A CLUSTER IS STANDING OUT FROM OTHERS
 clusterX_conserved_markers <- FindConservedMarkers(EC,
                                                    ident.1 = 10,
-                                                   grouping.var = "condition",
+                                                   grouping.var = "Disease_status",
                                                    only.pos = TRUE, min.pct = 0.25,
                                                    min.diff.pct = 0.25, 
                                                    logfc.threshold = 0.25)
@@ -112,7 +132,9 @@ clusterX_conserved_markers <- FindConservedMarkers(EC,
 ```{r}
 # Making feature grid plot for each of the features that are found
 
+head(clusterX_conserved_markers)
 
+head(rownames(clusterX_conserved_markers))
 
 ```
 
