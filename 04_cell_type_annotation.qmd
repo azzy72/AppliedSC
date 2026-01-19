@@ -6,20 +6,22 @@ format: html
 ```{r}
 # Load libraries
 suppressPackageStartupMessages({
-library(Seurat)
-library(ggplot2)
-library(patchwork)
-library(dplyr)
-library(tidyr)
-library(multtest)
-library(metap)
-library(tibble)
-library(clustree)
-library(SingleR)
+  library(Seurat)
+  library(ggplot2)
+  library(patchwork)
+  library(dplyr)
+  library(tidyr)
+  library(multtest)
+  library(metap)
+  library(tibble)
+  library(clustree)
+  library(SingleR)
 })
 
 source("./paths.R")
 #source("./functions.R")
+
+EC <- readRDS(paste0(EC_seurats_path, "03_EC.rds"))
 ```
 
 ### Cell clustering
@@ -28,13 +30,12 @@ For cell type annotation, we will perform clustering first to gain insight into 
 
 ```{r}
 # Identify neighbors based on the CCA integration and perform clusering
-# REMEMBER TO UPDATE PCS
-obj.cca <- FindNeighbors(obj,
-                         dims = 1:14, 
+EC.cca <- FindNeighbors(EC,
+                         dims = 1:15, 
                          reduction = "CCA_Integration", 
                          graph.name = "CCA_snn")
 
-obj.cca <- FindClusters(obj.cca, 
+EC.cca <- FindClusters(EC.cca, 
                         resolution = c(0.4, 0.6, 0.8, 1.0, 1.2), 
                         algorithm = 4, 
                         graph.name = "CCA_snn")
@@ -45,12 +46,12 @@ obj.cca <- FindClusters(obj.cca,
 Clustering optimization is necessary to come to a clustering of cell types that we can confidently continue our analysis on. For optimization, we will test different resolutions (k) and determine the lowest resolution that provides a good clustering. To investigate this, we will create a clustree.
 
 ```{r}
-clustree(obj.cca, prefix = "CCA_snn_res.")
+clustree(EC.cca, prefix = "CCA_snn_res.")
 ```
 
 ```{r}
 # Set Idents to the resolution that was best
-Idents(obj.cca) <- "CCA_snn_res.X.X" 
+Idents(EC.cca) <- "CCA_snn_res.X.X" 
 ```
 
 ### Cell type assignment

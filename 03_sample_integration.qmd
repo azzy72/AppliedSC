@@ -31,7 +31,7 @@ For sample integration it is our aim to perform horizontal integration across do
 
 ```{r}
 # Initial look at clustering (before integration)
-DimPlot(EC, reduction="umap", group.by = "donor")
+DimPlot(EC, reduction="UMAP", group.by = "donor")
 ```
 
 This plot reveals that....
