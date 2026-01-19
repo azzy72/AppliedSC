@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
   library(multtest)
   library(metap)
   library(tibble)
+  library(future)
 })
 
 source("./paths.R")
@@ -70,7 +71,31 @@ EC <- IntegrateLayers(object = EC,
                        verbose = FALSE
 )
 
-# Re-join the split layers
+```
+
+```{r}
+options(future.globals.maxSize = 6 * 1024^3)
+
+EC <- IntegrateLayers(object = EC, 
+                       method = RPCAIntegration ,
+                       orig.reduction = "pca", 
+                       new.reduction = "RPCA_Integration",
+                       dims = 1:15, 
+                       verbose = FALSE
+)
+
+
+```
+
+```{r}
+
+EC <- IntegrateLayers(object = EC, 
+                       method = HarmonyIntegration ,
+                       orig.reduction = "pca", 
+                       new.reduction = "harmony_Integration",
+                       dims = 1:15, 
+                       verbose = FALSE)
+
 EC[["RNA"]] <- JoinLayers(EC[["RNA"]])
 ```
 
@@ -82,44 +107,29 @@ EC <- RunUMAP(EC,
                dims = 1:15, 
                reduction = "CCA_Integration", 
                reduction.name = "umap_cca")
+
+
+EC <- RunUMAP(EC, 
+               dims = 1:15, 
+               reduction = "RPCA_Integration", 
+               reduction.name = "umap_rpca")
+
+
+EC <- RunUMAP(EC, 
+               dims = 1:15, 
+               reduction = "harmony_Integration", 
+               reduction.name = "umap_harmony")
 ```
 
 ### Visualize integrated clusters
 
 ```{r}
-p1 <- DimPlot(EC, reduction = 'UMAP', group.by = 'donor') + ggtitle("UMAP raw_data")
+p1 <- DimPlot(EC, reduction = 'UMAP', group.by = 'donor') + ggtitle("UMAP non-integrated data")
 p2 <- DimPlot(EC, reduction = "umap_cca", group.by = "donor") + ggtitle("UMAP CCA")
+p3 <- DimPlot(EC, reduction = "umap_rpca", group.by = "donor") + ggtitle("UMAP RPCA")
+p4 <- DimPlot(EC, reduction = "umap_harmony", group.by = "donor") + ggtitle("UMAP Harmony")
 
-wrap_plots(p1, p2, nrow = 1) + plot_layout(guides = "collect")
-```
-
-```{r}
-p2
-```
-
-### Tile Visualization
-
-```{r}
-df <- data.frame(
-  cluster = EC@meta.data$RNA_snn_res.0.8,
-  donor = EC@meta.data$donor
-)
-
-summary_df <- df %>%
-  group_by(cluster, donor) %>%
-  summarize(count = n(), .groups = "drop") %>%
-  group_by(cluster) %>%
-  mutate(fraction = count / sum(count))
-```
-
-```{r}
-ggplot(summary_df, aes(x = donor, y = cluster, fill = fraction)) +
-  geom_tile(color = "white") +
-  geom_text(aes(label = round(fraction, 2)), color = "black", size = 3) + 
-  scale_fill_gradient(low = "white", high = "red") +
-  theme_minimal() +
-  labs(x = "Sample", y = "Cluster", fill = "Fraction") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+wrap_plots(p1, p2, p3, p4, nrow = 2) + plot_layout(guides = "collect")
 ```
 
 # Saving final Seurat object
