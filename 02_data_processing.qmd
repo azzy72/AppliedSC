@@ -323,9 +323,14 @@ ElbowPlot(EC) # 1:9 looks good
 Running and storing naive UMAP embedding
 
 ```{r}
-EC <- FindNeighbors(EC, dims = 1:9)
+EC <- FindNeighbors(EC, dims = 1:15)
 EC <- FindClusters(EC, algorithm = 4, random.seed = 40)
-EC <- RunUMAP(EC, dims=1:9)
+EC <- RunUMAP(EC, dims=1:15)
+```
+
+```{r}
+saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
+
 ```
 
 ## Doublets investigation
@@ -334,21 +339,17 @@ Checking for doublets without filtering
 
 ```{r}
 # converting to sce element  
-sce_EC <- as.SingleCellExperiment(EC)    
+sce_EC <- as.SingleCellExperiment(EC) 
+
 # perorming doublet finder  
 set.seed(42) 
 sce_EC.dbl <- scDblFinder(sce_EC ,samples="donor", clusters=colLabels(sce_EC)) 
 ```
 
 ```{r}
-sce_EC.dbl <- logNormCounts(sce_EC.dbl)  
-# Check that the assay exists now 
-assayNames(sce_EC.dbl)
-```
-
-```{r}
 # plot UMAP of potential doublets 
-sce_EC.dbl <- runUMAP(sce_EC.dbl, exprs_values = "logcounts")  
+#sce_EC.dbl <- runUMAP(sce_EC.dbl, exprs_values = "logcounts")  
+
 plotUMAP(sce_EC.dbl, colour_by="scDblFinder.score")
 ```
 
@@ -358,10 +359,23 @@ table(sce_EC.dbl$scDblFinder.class)
 ```
 
 ```{r}
-plotColData(sce_EC.dbl, y="scDblFinder.score", colour_by=("scDblFinder.class"))
+plotColData(sce_EC.dbl, x="RNA_snn_res.0.8", y="scDblFinder.score", colour_by=("scDblFinder.class"))
 ```
 
-# 
+```{r}
+sce_EC.singlets <- sce_EC.dbl[, sce_EC.dbl$scDblFinder.class == "singlet"]
+
+singlet_names <- colnames(sce_EC.singlets)
+
+```
+
+Changing back to seurat with only singlet
+
+```{r}
+
+# Suppose sce_EC.singlets is your filtered SCE
+EC <- subset(EC, cells=singlet_names)
+```
 
 # Saving final Seurat object
 
