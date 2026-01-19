@@ -60,24 +60,12 @@ Idents(EC.cca) <- "CCA_snn_res.X.X"
 
 **Manual marker cell type assignment**
 
-Cell type assignment by manual markers requires prior knowledge about characteristic markers for the cells that we are expecting in the data. The expression of the marker can be visualized with the `FeaturePlot()`
-
-```{r}
-# Visualize gene expression
-FeaturePlot(EC.cca, 
-            reduction = "umap_cca", 
-            features = c("XXX"), 
-            order = TRUE,
-            min.cutoff = 'q10', 
-            label = TRUE)
-```
-
 It is also possible to utilize `FindConsveredMarkers()` and `FindMarkers()` for identifying genes that stand out in a cluster.
 
 ```{r}
 # Compare one cluster to all the other clusters
 # USE IF A CLUSTER IS STANDING OUT FROM OTHERS
-clusterX_conserved_markers <- FindConservedMarkers(obj.cca,
+clusterX_conserved_markers <- FindConservedMarkers(EC,
                                                    ident.1 = 10,
                                                    grouping.var = "condition",
                                                    only.pos = TRUE, min.pct = 0.25,
@@ -86,16 +74,38 @@ clusterX_conserved_markers <- FindConservedMarkers(obj.cca,
 ```
 
 ```{r}
-# Compare one cluster to another
-clusterX_clusterY_markers <- FindMarkers(obj.cca,
-                                         ident.1 = X,
-                                         ident.2 = Y,
-                                         grouping.var = "condition",
-                                         only.pos = TRUE, 
-                                         min.pct = 0.25,
-                                         min.diff.pct = 0.25, 
-                                         logfc.threshold = 0.25)
+# Making feature grid plot for each of the features that are found
+
+
+
 ```
+
+
+#Annotate the cell types from the found features
+
+```{r}
+# 1. Create a mapping dictionary named "cell_typ_dict" like below.
+cell_typ_dict <- c( "1" = "CELL_TYPE_A", # replace these with real cell types.
+                     "2" = "CELL_TYPE_B",
+                     "3" = "CELL_TYPE_C",
+                     "4" = "CELL_TYPE_A",
+                     "5" = "CELL_TYPE_A",
+                     "6" = "CELL_TYPE_B",
+                     "7" = "CELL_TYPE_B",
+                     "8" = "CELL_TYPE_C",
+                     "9" = "CELL_TYPE_C",
+                     "10" = "CELL_TYPE_D",
+                     "11" = "CELL_TYPE_D",
+                     "12" = "CELL_TYPE_E",
+                     "13" = "CELL_TYPE_F",
+                     "14" = "CELL_TYPE_F",
+                     "15" = "CELL_TYPE_G")
+# 2. Map the clusters to the identified cell types and store them as a new column named "cell_type_manual".
+pbmc.MTB.cca$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(pbmc.MTB.cca))])
+
+```
+
+
 
 **Automatic cell type assignment**
 
