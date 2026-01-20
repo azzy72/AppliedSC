@@ -21,13 +21,23 @@ suppressPackageStartupMessages({
 source("./paths.R")
 ```
 
+Load in data
+
+```{r}
+EC <- readRDS(paste0(EC_seurats_path, "04_EC_manual.rds"))
+```
+
 ### DESeq2
+
+```{r}
+
+```
 
 ```{r}
 # Pseudobulk data
 # Aggregate counts to donor level
 # REMEMBER to doublecheck if we are grouping by cell type and donor
-counts <- AggregateExpression(obj, 
+counts <- AggregateExpression(EC, 
                               group.by = c("cell_type_manual", "donor"),
                               assays =  "RNA",
                               return.seurat = FALSE)
@@ -72,15 +82,15 @@ counts_cell_type <- cts.split.modified$`cell_type`
 # REMEMEBER to update 'counts_cell_type'
 colData <- data.frame(samples = colnames(counts_cell_type))
 
-# Grep only hypertension donors and assign 'Sick'-label
-colData <- colData %>%
-  # Replace 'hypertension' with the string that defines the donor as sick
-  # in the 'samples'-column. 
-  dplyr::mutate(condition = ifelse(grepl('hypertension', samples), 
-                                   'Sick', 
-                                   'Normal')) %>%
-  
-  column_to_rownames(var = 'samples')
+# # Grep only hypertension donors and assign 'Sick'-label
+# colData <- colData %>%
+#   # Replace 'hypertension' with the string that defines the donor as sick
+#   # in the 'samples'-column. 
+#   dplyr::mutate(condition = ifelse(grepl('hypertension', samples), 
+#                                    'Sick', 
+#                                    'Normal')) %>%
+#   
+#   column_to_rownames(var = 'donor')
 ```
 
 Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
