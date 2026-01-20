@@ -146,8 +146,8 @@ Making QC metric ViolinPlot
 ```{r}
 
 # making identity same for all
-Idents(EC) <- factor(rep("all-cells", ncol(EC)))
-levels(Idents(EC))
+#Idents(EC) <- factor(rep("all-cells", ncol(EC)))
+#levels(Idents(EC))
 
 # Restoring the identity: 
 # Idents(EC) <- EC$donor
