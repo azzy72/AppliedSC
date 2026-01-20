@@ -3,3 +3,74 @@ title: "07_gene_regulation_interation"
 format: html
 ---
 
+## Loading data and libraries
+
+```{r}
+suppressPackageStartupMessages({
+library(Signac)
+library(Seurat)
+library(ggplot2)
+library(dplyr)
+})
+
+source("./paths.R")
+#source("./functions.R")
+```
+
+```{r}
+EC <- readRDS(paste0(EC_seurats_path, "04_EC_manual.rds"))
+print(EC)
+```
+
+## Data processing
+
+```{r}
+DefaultAssay(EC) <- "ATAC"
+
+EC <- RunTFIDF(EC)
+EC <- FindTopFeatures(EC, min.cutoff="q0")
+EC <- RunSVD(EC)
+```
+
+Checking dimensions - we want to remove first one as it often explains technical variance
+
+```{r}
+DepthCor(EC)
+```
+
+```{r}
+EC <- RunUMAP(EC, reduction = "lsi", dims = 2:30, reduction.name = "umap.atac", reduction.key = "atacUMAP_")
+```
+
+## Data integration - vertical 
+
+```{r}
+
+EC <- FindMultiModalNeighbors(EC, reduction.list = list("harmony_Integration", "lsi"), dims.list = list(1:15, 2:30))
+
+```
+
+```{r}
+EC <- RunUMAP(EC, nn.name = "weighted.nn", reduction.name = "wnn.umap", reduction.key = "wnnUMAP_")
+```
+
+```{r}
+EC <- FindClusters(EC, graph.name = "wsnn", algorithm = 4, verbose = FALSE)
+```
+
+```{r}
+
+p1 <- DimPlot(EC, reduction='umap_harmony') + ggtitle("RNA")
+p2 <- DimPlot(EC, reduction='umap.atac') + ggtitle("ATAC")
+p3 <- DimPlot(EC, reduction='wnn.umap') + ggtitle("WNN")
+g <- (p1 | p2 | p3) & theme(plot.title = element_text(hjust = 0.5))
+print(g)
+```
+
+```{r}
+FeaturePlot(
+  EC,
+  features = c("RNA.weight", "ATAC.weight"),
+  reduction = "wnn.umap"
+)
+```
