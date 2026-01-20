@@ -227,10 +227,21 @@ Since we have a PBMC dataset, there’s a lot of cell types in the reference dat
 
 ```{r}
 # Load pathways
-rna_matrix   <- paste0(reference_data_path, "ref_matrix.mtx.gz")
-rna_features <- paste0(reference_data_path, "features.tsv.gz")
-rna_barcodes <- paste0(reference_data_path, "barcodes.tsv.gz")
+rna_matrix   <- paste0(reference_data_path, "scipyref_matrix.mtx.gz")
+rna_features <- paste0(reference_data_path, "ref_features.tsv.gz")
+rna_barcodes <- paste0(reference_data_path, "ref_barcodes.tsv.gz")
 
+rna_features_data <- read.csv(paste0(reference_data_path, "ref_features2.tsv.gz"), sep="\t")
+rna_features_data <- rna_features_data[, c("ENSG00000243485", "MIR1302.2HG", "Gene.Expression")]
+
+write.table(rna_features_data, 
+            rna_features,
+            row.names=FALSE,
+            sep ="\t") # Remove index
+```
+
+```{r}
+# Create Seurat object
 counts <- ReadMtx(
   mtx = rna_matrix,
   features = rna_features,
@@ -239,84 +250,105 @@ counts <- ReadMtx(
 
 seurat_obj <- CreateSeuratObject(
   counts = counts,
-  project = proj_prefix
+  project = "reference"
 )
+
+saveRDS(seurat_obj, file = paste0(reference_data_path, "ref.rds"))
 ```
 
 ```{r}
-# 1. Load optimized libraries
-library(Seurat)
-library(scuttle)     # Best for memory-efficient reading of flat files
-library(data.table)  # For fast loading of barcodes/features
-
-# 2. Define your file paths
-# Adjust names if they are different in your directory
-matrix_file   <- paste0(reference_data_path, "matrix.mtx.gz")
-barcode_file  <- paste0(reference_data_path, "barcodes.tsv.gz")
-feature_file  <- paste0(reference_data_path, "features.tsv.gz")
-
-# 3. Read the count matrix into a Sparse Matrix (dgCMatrix)
-# This handles .gz automatically and doesn't require MatrixMarket format
-counts <- scuttle::readSparseCounts(matrix_file)
-counts <- fread(matrix_file, header = TRUE, data.table = FALSE)
-
-# 4. Read and attach Barcodes and Features
-# We use fread for speed and to keep memory usage low
-barcodes <- fread(barcode_file, header = FALSE)$V1
-features <- fread(feature_file, header = FALSE)$V2 # Use V2 for gene names, V1 for IDs
-
-# Assign names to the sparse matrix
-colnames(counts) <- barcodes
-rownames(counts) <- features
-
-# 5. Create the Seurat Object
-seurat_obj <- CreateSeuratObject(
-  counts = counts,
-  project = "scRNA_Analysis",
-  min.cells = 3,
-  min.features = 200
-)
-
-# 6. Memory Clean-up
-rm(counts, barcodes, features)
-gc()
+#REF <- readRDS(paste0(reference_data_path, "ref.rds"))
 ```
 
 ```{r}
-dataset_h5ad <- Read10X(data.dir = reference_data_path)
+# Reference meta data
+# metadata <- read.csv(paste0(reference_data_path, "all_ref_data.csv"), sep=";")
+# 
+# # Check the first few rows to ensure 'cell_type' is present
+# head(metadata[, "cell_type", drop = FALSE])
 ```
 
 ```{r}
-message("Loading RNA counts and creating Reference Seurat object")
-counts <- ReadMtx(
-  mtx = rna_matrix,
-  features = rna_features,
-  cells = rna_barcodes
+# Add cell type
+REF <- AddMetaData(
+  object = REF,
+  metadata = metadata[, "cell_type"],
+  col.name = "cell_type"
 )
 
-seurat_obj <- CreateSeuratObject(
-  counts = counts,
-  project = proj_prefix
+# Add tissue
+REF <- AddMetaData(
+  object = REF,
+  metadata = metadata[, "tissue"],
+  col.name = "tissue"
 )
+
+# Add highlevel cell type category
+REF <- AddMetaData(
+  object = REF,
+  metadata = metadata[, "category"],
+  col.name = "cell_category"
+)
+
+# Add disease
+REF <- AddMetaData(
+  object = REF,
+  metadata = metadata[, "disease"],
+  col.name = "disease_state"
+)
+
+# Add diagnosis. Options = (fetal, healthy adult, pediatric crohn's disease, pediatric healthy)
+REF <- AddMetaData(
+  object = REF,
+  metadata = metadata[, "Diagnosis"],
+  col.name = "ref_diagnosis"
+)
+```
+
+#### Subset reference data
+
+We want to first subset based on 'tissue'. Here, we would like to only work with values 'ascending colon' and 'transverse colon'.
+
+```{r}
+# Subset based on tissue
+ REF.filtered <- subset(REF,
+                        tissue %in% c("ascending colon", "transverse colon"))
+# 
+# # Subset based on disease_state -> we would only like to keep 'normal'
+# REF.filtered <- subset(REF.filtered,
+#                        disease_state == "normal")
+# 
+# # Subset based on ref_diagnosis -> we would like to discard "Pediatric Crohn Disease"
+# REF.filtered <- subset(REF.filtered,
+#                        ref_diagnosis != "Pediatric Crohn Disease")
+```
+
+```{r}
+# Save subsetted reference data
+#saveRDS(REF.filtered, file = paste0(reference_data_path, "ref_subset.rds"))
 ```
 
 #### Run SingleR
 
 ```{r}
-# Call upon the reference database
-# NOTE: reference database still undecided
-ref <- as.SingleCellExperiment(obj, assay = "RNA")
+# Load reference data
+#ref <- readRDS(paste0(reference_data_path, "ref_subset.rds"))
 ```
 
 ```{r}
-obj.counts <- GetAssayData(obj.cca, assay = "RNA", layer = 'counts')
+# Work with the reference database as a SCE object
+ref <- as.SingleCellExperiment(REF.filtered, assay = "RNA")
+```
+
+```{r}
+EC_counts <- GetAssayData(EC, assay = "RNA", layer = 'counts')
 ```
 
 ```{r}
 # Run SingleR
-cell_type_pred <- SingleR(test = obj.counts,
+cell_type_pred <- SingleR(test = EC_counts,
                           ref = ref,
-                          labels = ref$CellType,
+                          labels = ref$cell_type,
                           de.method="wilcox")
 ```
 
