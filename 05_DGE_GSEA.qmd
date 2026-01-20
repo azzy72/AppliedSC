@@ -3,3 +3,144 @@ title: "07_differential_gene_expression"
 format: html
 ---
 
+```{r}
+# Load libraries
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(ggplot2)
+  library(patchwork)
+  library(dplyr)
+  library(tidyr)
+  library(multtest)
+  library(metap)
+  library(tibble)
+  library(DESeq2)
+})
+
+source("./paths.R")
+```
+
+### DESeq2
+
+```{r}
+# Pseudobulk data
+# Aggregate counts to donor level
+# REMEMBER to doublecheck if we are grouping by cell type and donor
+counts <- AggregateExpression(obj, 
+                              group.by = c("cell_type_manual", "donor"),
+                              assays =  "RNA",
+                              return.seurat = FALSE)
+
+# Transpose
+counts.t <- t(counts)
+
+# Convert to data.frame
+counts.t <- as.data.frame(counts.t)
+
+# Get values where to split
+# EXAMPLE: from 'Bcell_sample1' to 'Bcell'
+splitRows <- gsub('_.*', '', rownames(counts.t))
+```
+
+```{r}
+# Split data.frame
+cts.split <- split.data.frame(counts.t,
+                              f = factor(splitRows))
+# Fix colnames and transpose
+cts.split.modified <- lapply(cts.split, function(x){
+    rownames(x) <- gsub('.*_(.*)', '\\1', rownames(x)) 
+    # EXAMPLE: from 'Bcell_sample1' to 'sample1'
+    t(x)
+})
+```
+
+We then "subset" the data looking only at a target cell type and its count matrix.
+
+```{r}
+# REMEMBER to replace 'cell_type' with e.g. 'CD14+ Monocyte'
+
+# EXAMPLE:
+# counts_monocytes <- cts.split.modified$`CD14+ Monocyte`
+
+# SUGGESTION: update the name 'counts_cell_type'
+counts_cell_type <- cts.split.modified$`cell_type`
+```
+
+```{r}
+# Define the colnames to be the colnames of the cell_type count matrix
+# REMEMEBER to update 'counts_cell_type'
+colData <- data.frame(samples = colnames(counts_cell_type))
+
+# Grep only hypertension donors and assign 'Sick'-label
+colData <- colData %>%
+  # Replace 'hypertension' with the string that defines the donor as sick
+  # in the 'samples'-column. 
+  dplyr::mutate(condition = ifelse(grepl('hypertension', samples), 
+                                   'Sick', 
+                                   'Normal')) %>%
+  
+  column_to_rownames(var = 'samples')
+```
+
+Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
+
+```{r}
+# Create DESeq2 object   
+# REMEMEBER to update 'counts_cell_type'
+dds <- DESeqDataSetFromMatrix(countData = counts_cell_typee,
+                              colData = colData,
+                              design = ~ condition)
+```
+
+```{r}
+# Remove rows (genes) that have fewer than 10 reads.
+keep <- rowSums(counts(dds)) >=10
+dds <- dds[keep,]
+```
+
+```{r}
+# Run DESeq2
+dds <- DESeq(dds)
+
+# Save the resuslts
+res <- result(dds, name = "condition_Sick_vs_Control")
+summary(res)
+```
+
+We can now identify the top 20 differentially expressed genes in cell type X in sick donors compared to control donors. You can either sort by p-adjusted or log2FoldChange. padj reflects the significance of results while log2FoldChange reflects the "power" of the difference between the conditions (NOTE: account for negative and positive value by looking at the absolute values).
+
+```{r}
+# Set thresholds
+padj_cutoff <- 0.05
+
+# Turn the DESeq2 results object into a tibble for use with tidyverse functions
+res_tbl <- res %>%
+  data.frame() %>%
+  rownames_to_column(var = "gene") %>%
+  as_tibble()
+
+# Subset the significant results
+sig_res <- dplyr::filter(res_tbl, padj < padj_cutoff)
+```
+
+```{r}
+# Order results by padj values.
+top20_sig_genes <- sig_res %>%
+  dplyr::arrange(padj) %>%
+  dplyr::pull(gene) %>%
+  head(n=20)
+
+print(top20_sig_genes)
+```
+
+```{r}
+# Order results by log2FoldChange values.
+top20_sig_genes <- sig_res %>%
+  dplyr::arrange(log2FoldChange) %>%
+  dplyr::pull(gene) %>%
+  head(n=20)
+
+print(top20_sig_genes)
+```
+
+### fgsea
