@@ -105,6 +105,18 @@ table(EC$Disease_status, EC$donor)
 
 ```
 
+### Feature plot
+
+```{r}
+# Example: CD14 is a gene typically expressed by monocytes.
+FeaturePlot(EC, 
+            reduction = "umap_harmony", 
+            features = c("SMOC2"), 
+            order = TRUE,
+            min.cutoff = 'q10', 
+            label = TRUE) 
+```
+
 **Manual marker cell type assignment**
 
 It is also possible to utilize `FindConsveredMarkers()` and `FindMarkers()` for identifying genes that stand out in a cluster.
@@ -129,7 +141,6 @@ head(rownames(clusterX_conserved_markers))
 
 ```
 
-
 ```{r}
 # Find markers for all the clusters
 for (cluster in levels(unique(Idents(EC) ))){
@@ -140,8 +151,6 @@ for (cluster in levels(unique(Idents(EC) ))){
   print(head(p))
 }
 ```
-
-
 
 #Annotate the cell types from the found features
 
@@ -159,7 +168,7 @@ cell_typ_dict <- c( "1" = "CELL_TYPE_1", # replace these with real cell types.
                      "10" = "CELL_TYPE_10",
                      "11" = "CELL_TYPE_11",
                      "12" = "Smooth Muscle Cells",
-                     "13" = "CELL_TYPE_13",
+                     "13" = "Stem cells",
                      "14" = "CELL_TYPE_14",
                      "15" = "Goblet cells",
                      "16" = "CELL_TYPE_16",
@@ -170,7 +179,7 @@ cell_typ_dict <- c( "1" = "CELL_TYPE_1", # replace these with real cell types.
                      "21" = "Macrophages",
                      "22" = "Fibroblasts",
                      "23" = "Vascular Endothelial Cells",
-                     "24" = "CELL_TYPE_24",
+                     "24" = "B cells",
                      "25" = "CELL_TYPE_25"
                     )
 # 2. Map the clusters to the identified cell types and store them as a new column named "cell_type_manual".
@@ -178,13 +187,15 @@ EC$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(EC))])
 
 ```
 
-
 ```{r}
-# saveRDS(EC, file = paste0(EC_seurats_path, "04_EC_manual.rds"))
+clusters <- DimPlot(EC, reduction = 'umap_harmony', label = TRUE)
+timepoint <- DimPlot(EC, reduction = 'umap_harmony', group.by = 'donor')
+celltype <- DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_manual', label = TRUE) + NoLegend()
 ```
 
-
-
+```{r}
+#saveRDS(EC, file = paste0(EC_seurats_path, "04_EC_manual.rds"))
+```
 
 **Automatic cell type assignment**
 
