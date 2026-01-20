@@ -44,7 +44,6 @@ EC <- FindClusters(EC,
                         graph.name = "harmony_snn")
 ```
 
-
 ### Clustering optimization
 
 Clustering optimization is necessary to come to a clustering of cell types that we can confidently continue our analysis on. For optimization, we will test different resolutions (k) and determine the lowest resolution that provides a good clustering. To investigate this, we will create a clustree.
@@ -57,7 +56,6 @@ clustree(EC, prefix = "harmony_snn_res.")
 # Set Idents to the resolution that was best
 Idents(EC) <- "harmony_snn_res.0.8" 
 ```
-
 
 #Tile plot
 
@@ -77,7 +75,6 @@ summary_df <- df %>%
 
 ```
 
-
 ```{r}
 ggplot(summary_df, aes(x = donor, y = cluster, fill = fraction)) +
   geom_tile(color = "white") +
@@ -88,12 +85,7 @@ ggplot(summary_df, aes(x = donor, y = cluster, fill = fraction)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-
-
-
-
 ### Cell type assignment
-
 
 ```{r}
 
@@ -112,7 +104,6 @@ table(EC$Disease_status, EC$donor)
 
 
 ```
-
 
 **Manual marker cell type assignment**
 
@@ -138,7 +129,6 @@ head(rownames(clusterX_conserved_markers))
 
 ```
 
-
 #Annotate the cell types from the found features
 
 ```{r}
@@ -163,8 +153,6 @@ pbmc.MTB.cca$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(pbmc.M
 
 ```
 
-
-
 **Automatic cell type assignment**
 
 following this tutorial: https://biostatsquid.com/singler-tutorial/
@@ -176,10 +164,10 @@ To run automatic cell type assignment the Seurat object has to be a SingleCellEx
 First of all we need a cell annotation reference dataset
 
 ```{r}
-raw_counts <- LayerData(seu, assay = "RNA", layer = 'counts') #
-raw_counts[c('VIM', 'BCL2', 'TP53', 'CD4'),1:5]
-norm_counts <- LayerData(seu, assay = "RNA", layer = 'data') #
-norm_counts[c('VIM', 'BCL2', 'TP53', 'CD4'),1:5]
+#raw_counts <- LayerData(seu, assay = "RNA", layer = 'counts') #
+#raw_counts[c('VIM', 'BCL2', 'TP53', 'CD4'),1:5]
+#norm_counts <- LayerData(seu, assay = "RNA", layer = 'data') #
+#norm_counts[c('VIM', 'BCL2', 'TP53', 'CD4'),1:5]
 ```
 
 Thereafter we use the HumanPrimaryCellAtlasData to find a reference dataset
@@ -187,9 +175,9 @@ Thereafter we use the HumanPrimaryCellAtlasData to find a reference dataset
 ```{r}
 
 # 2. Get reference dataset
-ref <- celldex::HumanPrimaryCellAtlasData()
-unique(ref$label.main)
-unique(ref$label.fine)
+#ref <- celldex::HumanPrimaryCellAtlasData()
+#unique(ref$label.main)
+#unique(ref$label.fine)
 
 ```
 
@@ -197,10 +185,89 @@ Since we have a PBMC dataset, there’s a lot of cell types in the reference dat
 
 ```{r}
 # Subset to include only relevant cell types (CAREFUL!)
-ref <- ref[,grepl('DC|B_cell|Neutrophils|T_cells|Monocyte|Erythroblast|
-                 Macrophage|NK_cell|Platelets|Myelocyte', ref$label.main)]
-unique(ref$label.main)
+#ref <- ref[,grepl('DC|B_cell|Neutrophils|T_cells|Monocyte|Erythroblast|
+#                 Macrophage|NK_cell|Platelets|Myelocyte', ref$label.main)]
+#unique(ref$label.main)
 ```
+
+#### Data import of reference material
+
+```{r}
+# Load pathways
+rna_matrix   <- paste0(reference_data_path, "ref_matrix.mtx.gz")
+rna_features <- paste0(reference_data_path, "features.tsv.gz")
+rna_barcodes <- paste0(reference_data_path, "barcodes.tsv.gz")
+
+counts <- ReadMtx(
+  mtx = rna_matrix,
+  features = rna_features,
+  cells = rna_barcodes
+)
+
+seurat_obj <- CreateSeuratObject(
+  counts = counts,
+  project = proj_prefix
+)
+```
+
+```{r}
+# 1. Load optimized libraries
+library(Seurat)
+library(scuttle)     # Best for memory-efficient reading of flat files
+library(data.table)  # For fast loading of barcodes/features
+
+# 2. Define your file paths
+# Adjust names if they are different in your directory
+matrix_file   <- paste0(reference_data_path, "matrix.mtx.gz")
+barcode_file  <- paste0(reference_data_path, "barcodes.tsv.gz")
+feature_file  <- paste0(reference_data_path, "features.tsv.gz")
+
+# 3. Read the count matrix into a Sparse Matrix (dgCMatrix)
+# This handles .gz automatically and doesn't require MatrixMarket format
+counts <- scuttle::readSparseCounts(matrix_file)
+counts <- fread(matrix_file, header = TRUE, data.table = FALSE)
+
+# 4. Read and attach Barcodes and Features
+# We use fread for speed and to keep memory usage low
+barcodes <- fread(barcode_file, header = FALSE)$V1
+features <- fread(feature_file, header = FALSE)$V2 # Use V2 for gene names, V1 for IDs
+
+# Assign names to the sparse matrix
+colnames(counts) <- barcodes
+rownames(counts) <- features
+
+# 5. Create the Seurat Object
+seurat_obj <- CreateSeuratObject(
+  counts = counts,
+  project = "scRNA_Analysis",
+  min.cells = 3,
+  min.features = 200
+)
+
+# 6. Memory Clean-up
+rm(counts, barcodes, features)
+gc()
+```
+
+```{r}
+dataset_h5ad <- Read10X(data.dir = reference_data_path)
+```
+
+```{r}
+message("Loading RNA counts and creating Reference Seurat object")
+counts <- ReadMtx(
+  mtx = rna_matrix,
+  features = rna_features,
+  cells = rna_barcodes
+)
+
+seurat_obj <- CreateSeuratObject(
+  counts = counts,
+  project = proj_prefix
+)
+```
+
+#### Run SingleR
 
 ```{r}
 # Call upon the reference database
@@ -222,7 +289,8 @@ cell_type_pred <- SingleR(test = obj.counts,
 
 ```{r}
 # Save the annotation results
-obj.cca$cell_type_automatic <- cell_type_pred$pruned.labels[match(rownames(obj.cca@meta.data), rownames(cell_type_pred))]
+obj.cca$cell_type_automatic <- cell_type_pred$pruned.labels[match(rownames(obj.cca@meta.data), 
+                                                                  rownames(cell_type_pred))]
 ```
 
 ```{r}
