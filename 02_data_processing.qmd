@@ -88,8 +88,8 @@ keep_genes <- rownames(EC)[!grepl(":", rownames(EC))]
 # Subset the Seurat object
 EC[["RNA"]] <- subset(EC[["RNA"]], features = keep_genes)
 
+# subsetting our nFeatures to actually match
 EC@meta.data$subset_nFeature <- colSums(GetAssayData(EC, assay = "RNA", layer = "counts") > 0)
-
 
   
 #EC <- subset(EC, features = keep_genes) #asbj: subset function was more safe than using []
@@ -108,22 +108,6 @@ EC[["percent.ribo"]] <- PercentageFeatureSet(EC, pattern = "^RPS|^RPL|^rps|^rpl"
 
 ```
 
-Converting NA to 0:
-
-```{r}
-features <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo")
-
-for (f in features) {
-  if (f %in% colnames(EC@meta.data)) {          # check it exists
-    x <- EC@meta.data[, f]                       # extract as vector
-    x[is.na(x) | is.infinite(x)] <- 0            # replace NA/Inf with 0
-    EC@meta.data[, f] <- x                        # write back
-  } else {
-    warning(paste("Feature not found in metadata:", f))
-  }
-}
-```
-
 Checking for no Na values for QC metric, should contain only zeros
 
 ```{r}
@@ -134,11 +118,13 @@ colSums(is.na(EC@meta.data[, c(
   "percent.ribo"
 )]))
 
-
 ```
 
 ```{r}
-EC@meta.data$percent.mt[is.na(EC@meta.data)]
+# replacing Na with zero values
+
+EC@meta.data$percent.mt[is.na(EC@meta.data$percent.mt)] <- 0 
+EC@meta.data$percent.ribo[is.na(EC@meta.data$percent.ribo)] <- 0 
 ```
 
 Making QC metric ViolinPlot
@@ -146,7 +132,7 @@ Making QC metric ViolinPlot
 ```{r}
 
 # making identity same for all
-#Idents(EC) <- factor(rep("all-cells", ncol(EC)))
+#Idents(EC) <- factor(rep("all-cells", ncol(EC))) # chaing ident be same for all
 #levels(Idents(EC))
 
 # Restoring the identity: 
@@ -154,6 +140,7 @@ Making QC metric ViolinPlot
 
 # Visualize QC metrics as a violin plot
 p <- VlnPlot(EC, features = c("subset_nFeature", "nCount_RNA", "percent.mt", "percent.ribo"), ncol = 4, group.by = NULL)
+
 p
 ```
 
@@ -172,21 +159,27 @@ cells_before <- ncol(EC)
 counts_before <- as.data.frame(table(EC$orig.ident))
 dist_sample_table_before <- table(EC$orig.ident)
 
-
-EC_subset <- subset(EC, subset= subset_nFeature > 200 & subset_nFeature < 11000 & percent.mt < 50 & percent.ribo < 50)
-
+# correct way, however did not work
 
 # cells_to_keep <- WhichCells(EC, expression = 
-#                               subset_nFeature > 200 &
-#                               subset_nFeature < 10000  &
-#                               percent.mt < 75 &
-#                               percent.ribo < 50)
+#                                subset_nFeature > 200 &
+#                                subset_nFeature < 11000  &
+#                                percent.mt < 50 &
+#                                percent.ribo < 25)
+
+
+cells_to_keep <- WhichCells(EC, expression =
+                              subset_nFeature > 50 & 
+                              subset_nFeature < 11000 &
+                               percent.mt < 25 &
+                               percent.ribo < 50)
+
 
 # intersect with ATAC cells
 cells_to_keep <- intersect(cells_to_keep, colnames(EC[["ATAC"]]))
 
 # subset
-EC_qc <- subset(EC, cells = cells_to_keep)
+EC <- subset(EC, cells = cells_to_keep)
 
 
 # EC <- subset(
@@ -196,10 +189,10 @@ EC_qc <- subset(EC, cells = cells_to_keep)
 #            percent.mt < 8 &
 #            percent.ribo < 50)
 
-cells_after <- ncol(EC_subset)
+cells_after <- ncol(EC)
 cells_lost <- cells_before - cells_after
-counts_after <- as.data.frame(table(EC_subset$orig.ident))
-dist_sample_table_after <- table(EC_subset$orig.ident)
+counts_after <- as.data.frame(table(EC$orig.ident))
+dist_sample_table_after <- table(EC$orig.ident)
 
 print(paste("Cells lost:", cells_lost))
 print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
@@ -252,6 +245,7 @@ ggplot(plot_data, aes(x = Sample, y = PercentKept, fill = Sample)) +
 # Random subsetting data
 
 ```{r}
+
 set.seed(123) # seed for reproducibility
 cells.use <- unlist(
   lapply(
@@ -344,7 +338,7 @@ EC <- RunUMAP(EC, dims=1:15)
 ```
 
 ```{r}
-saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
+#saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
 
 ```
 
@@ -396,5 +390,6 @@ EC <- subset(EC, cells=singlet_names)
 
 ```{r}
 # Saving with a simple name "EC"
-saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
+
+#saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
 ```
