@@ -23,7 +23,7 @@ suppressPackageStartupMessages({
 source("./paths.R")
 #source("./functions.R")
 
-EC <- readRDS(paste0(EC_seurats_path, "02_EC.rds"))
+EC <- readRDS(paste0(EC_seurats_path, "02_EC_v2.rds"))
 DefaultAssay(EC) <- "RNA"
 ```
 
@@ -33,7 +33,7 @@ For sample integration it is our aim to perform horizontal integration across do
 
 ```{r}
 # Initial look at clustering (before integration)
-DimPlot(EC, reduction="UMAP", group.by = "donor")
+DimPlot(EC, reduction="umap", group.by = "donor")
 ```
 
 This plot reveals that....
@@ -124,7 +124,7 @@ EC <- RunUMAP(EC,
 ### Visualize integrated clusters
 
 ```{r}
-p1 <- DimPlot(EC, reduction = 'UMAP', group.by = 'donor') + ggtitle("UMAP non-integrated data")
+p1 <- DimPlot(EC, reduction = 'umap', group.by = 'donor') + ggtitle("UMAP non-integrated data")
 p2 <- DimPlot(EC, reduction = "umap_cca", group.by = "donor") + ggtitle("UMAP CCA")
 p3 <- DimPlot(EC, reduction = "umap_rpca", group.by = "donor") + ggtitle("UMAP RPCA")
 p4 <- DimPlot(EC, reduction = "umap_harmony", group.by = "donor") + ggtitle("UMAP Harmony")

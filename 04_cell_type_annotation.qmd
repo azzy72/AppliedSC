@@ -54,7 +54,7 @@ clustree(EC, prefix = "harmony_snn_res.")
 
 ```{r}
 # Set Idents to the resolution that was best
-Idents(EC) <- "harmony_snn_res.0.8" 
+Idents(EC) <- "harmony_snn_res.1" 
 ```
 
 #Tile plot
@@ -63,7 +63,7 @@ Idents(EC) <- "harmony_snn_res.0.8"
 
 
 df <- data.frame(
-  cluster = EC@meta.data$harmony_snn_res.0.8,
+  cluster = EC@meta.data$harmony_snn_res.1,
   donor = EC@meta.data$donor
 )
 
