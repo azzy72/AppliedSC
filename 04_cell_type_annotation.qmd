@@ -63,7 +63,7 @@ Idents(EC) <- "harmony_snn_res.1"
 
 
 df <- data.frame(
-  cluster = EC@meta.data$harmony_snn_res.1,
+  cluster = EC@meta.data$harmony_snn_res.,
   donor = EC@meta.data$donor
 )
 
@@ -113,10 +113,10 @@ It is also possible to utilize `FindConsveredMarkers()` and `FindMarkers()` for 
 # Compare one cluster to all the other clusters
 # USE IF A CLUSTER IS STANDING OUT FROM OTHERS
 clusterX_conserved_markers <- FindConservedMarkers(EC,
-                                                   ident.1 = 10,
-                                                   grouping.var = "Disease_status",
+                                                   ident.1 = 7,
+                                                   grouping.var = "donor",
                                                    only.pos = TRUE, min.pct = 0.25,
-                                                   min.diff.pct = 0.25, 
+                                                   min.diff.pct = 0.05, 
                                                    logfc.threshold = 0.25)
 ```
 
@@ -128,6 +128,20 @@ head(clusterX_conserved_markers)
 head(rownames(clusterX_conserved_markers))
 
 ```
+
+
+```{r}
+# Find markers for all the clusters
+for (cluster in levels(unique(Idents(EC) ))){
+  p <- FindConservedMarkers(EC, ident.1 = cluster, grouping.var = "donor",
+                              only.pos = TRUE, min.pct = 0.25,
+                              min.diff.pct = 0.10, logfc.threshold = 0.25)
+  print(cluster)
+  print(head(p))
+}
+```
+
+
 
 #Annotate the cell types from the found features
 
@@ -152,6 +166,10 @@ cell_typ_dict <- c( "1" = "CELL_TYPE_A", # replace these with real cell types.
 pbmc.MTB.cca$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(pbmc.MTB.cca))])
 
 ```
+
+
+
+
 
 **Automatic cell type assignment**
 
