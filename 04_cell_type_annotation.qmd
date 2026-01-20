@@ -7,6 +7,7 @@ format: html
 # Load libraries
 suppressPackageStartupMessages({
   library(Seurat)
+  library(Signac)
   library(ggplot2)
   library(patchwork)
   library(dplyr)
@@ -237,18 +238,18 @@ Since we have a PBMC dataset, there’s a lot of cell types in the reference dat
 #### Data import of reference material
 
 ```{r}
-# Load pathways
-rna_matrix   <- paste0(reference_data_path, "scipyref_matrix.mtx.gz")
-rna_features <- paste0(reference_data_path, "ref_features.tsv.gz")
-rna_barcodes <- paste0(reference_data_path, "ref_barcodes.tsv.gz")
-
-rna_features_data <- read.csv(paste0(reference_data_path, "ref_features2.tsv.gz"), sep="\t")
-rna_features_data <- rna_features_data[, c("ENSG00000243485", "MIR1302.2HG", "Gene.Expression")]
-
-write.table(rna_features_data, 
-            rna_features,
-            row.names=FALSE,
-            sep ="\t") # Remove index
+# # Load pathways
+# rna_matrix   <- paste0(reference_data_path, "scipyref_matrix.mtx.gz")
+# rna_features <- paste0(reference_data_path, "ref_features.tsv.gz")
+# rna_barcodes <- paste0(reference_data_path, "ref_barcodes.tsv.gz")
+# 
+# rna_features_data <- read.csv(paste0(reference_data_path, "ref_features2.tsv.gz"), sep="\t")
+# rna_features_data <- rna_features_data[, c("ENSG00000243485", "MIR1302.2HG", "Gene.Expression")]
+# 
+# write.table(rna_features_data, 
+#             rna_features,
+#             row.names=FALSE,
+#             sep ="\t") # Remove index
 ```
 
 ```{r}
@@ -268,52 +269,52 @@ write.table(rna_features_data,
 ```
 
 ```{r}
-REF <- readRDS(paste0(reference_data_path, "ref.rds"))
+#REF <- readRDS(paste0(reference_data_path, "ref.rds"))
 ```
 
 ```{r}
-# Reference meta data
-metadata <- read.csv(paste0(reference_data_path, "all_ref_data.csv"), sep=";")
-
-# Check the first few rows to ensure 'cell_type' is present
-head(metadata[, "cell_type", drop = FALSE])
+# # Reference meta data
+# metadata <- read.csv(paste0(reference_data_path, "all_ref_data.csv"), sep=";")
+# 
+# # Check the first few rows to ensure 'cell_type' is present
+# head(metadata[, "cell_type", drop = FALSE])
 ```
 
 ```{r}
-# Add cell type
-REF <- AddMetaData(
-  object = REF,
-  metadata = metadata[, "cell_type"],
-  col.name = "cell_type"
-)
-
-# Add tissue
-REF <- AddMetaData(
-  object = REF,
-  metadata = metadata[, "tissue"],
-  col.name = "tissue"
-)
-
-# Add highlevel cell type category
-REF <- AddMetaData(
-  object = REF,
-  metadata = metadata[, "category"],
-  col.name = "cell_category"
-)
-
-# Add disease
-REF <- AddMetaData(
-  object = REF,
-  metadata = metadata[, "disease"],
-  col.name = "disease_state"
-)
-
-# Add diagnosis. Options = (fetal, healthy adult, pediatric crohn's disease, pediatric healthy)
-REF <- AddMetaData(
-  object = REF,
-  metadata = metadata[, "Diagnosis"],
-  col.name = "ref_diagnosis"
-)
+# # Add cell type
+# REF <- AddMetaData(
+#   object = REF,
+#   metadata = metadata[, "cell_type"],
+#   col.name = "cell_type"
+# )
+# 
+# # Add tissue
+# REF <- AddMetaData(
+#   object = REF,
+#   metadata = metadata[, "tissue"],
+#   col.name = "tissue"
+# )
+# 
+# # Add highlevel cell type category
+# REF <- AddMetaData(
+#   object = REF,
+#   metadata = metadata[, "category"],
+#   col.name = "cell_category"
+# )
+# 
+# # Add disease
+# REF <- AddMetaData(
+#   object = REF,
+#   metadata = metadata[, "disease"],
+#   col.name = "disease_state"
+# )
+# 
+# # Add diagnosis. Options = (fetal, healthy adult, pediatric crohn's disease, pediatric healthy)
+# REF <- AddMetaData(
+#   object = REF,
+#   metadata = metadata[, "Diagnosis"],
+#   col.name = "ref_diagnosis"
+# )
 ```
 
 #### Subset reference data
@@ -321,34 +322,34 @@ REF <- AddMetaData(
 We want to first subset based on 'tissue'. Here, we would like to only work with values 'ascending colon' and 'transverse colon'.
 
 ```{r}
-# Subset based on tissue
-REF.filtered <- subset(REF,
-                        tissue %in% c("ascending colon", "transverse colon"))
-
-# Subset based on disease_state -> we would only like to keep 'normal'
-REF.filtered <- subset(REF.filtered,
-                       disease_state == "normal")
-
-# Subset based on ref_diagnosis -> we would like to discard "Pediatric Crohn Disease"
-REF.filtered <- subset(REF.filtered,
-                       ref_diagnosis != "Pediatric Crohn Disease")
+# # Subset based on tissue
+# REF.filtered <- subset(REF,
+#                         tissue %in% c("ascending colon", "transverse colon"))
+# 
+# # Subset based on disease_state -> we would only like to keep 'normal'
+# REF.filtered <- subset(REF.filtered,
+#                        disease_state == "normal")
+# 
+# # Subset based on ref_diagnosis -> we would like to discard "Pediatric Crohn Disease"
+# REF.filtered <- subset(REF.filtered,
+#                        ref_diagnosis != "Pediatric Crohn Disease")
 ```
 
 Normalize the data (get logcounts)
 
 ```{r}
-#| warning: false
-#| message: false
-
-REF.filtered <- NormalizeData(REF.filtered)
-REF.filtered <- FindVariableFeatures(REF.filtered)
-REF.filtered <- ScaleData(REF.filtered)
+# #| warning: false
+# #| message: false
+# 
+# REF.filtered <- NormalizeData(REF.filtered)
+# REF.filtered <- FindVariableFeatures(REF.filtered)
+# REF.filtered <- ScaleData(REF.filtered)
 ```
 
 Save subsetted reference data
 
 ```{r}
-saveRDS(REF.filtered, file = paste0(reference_data_path, "ref_subset2.rds"))
+# saveRDS(REF.filtered, file = paste0(reference_data_path, "ref_subset2.rds"))
 ```
 
 #### Run SingleR
@@ -381,13 +382,75 @@ saveRDS(cell_category_pred, paste0(reference_data_path, "cell_category_pred.sing
 
 ```{r}
 # Save the annotation results
-EC$cell_type_automatic <- cell_type_pred$pruned.labels[match(rownames(EC@meta.data), 
+EC$cell_type_automatic <- cell_category_pred$pruned.labels[match(rownames(EC@meta.data), 
                                                              rownames(cell_category_pred))]
 ```
 
 ```{r}
 # Visualize
-DimPlot(EC, reduction = 'harmony_Integration', group.by = 'cell_type_automatic', pt.size = 0.1) +
-  theme(legend.text = element_text(size = 8)) + # Shrink legend text
+DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_automatic', pt.size = 0.1) +
+  ggtitle("Cell category annotation on UMAP harmony") +
+  theme(legend.text = element_text(size = 8), 
+        plot.title = element_text(hjust = 0.5, face = "bold")) + 
+  guides(fill = guide_legend(ncol = 3))         # Force the legend into multiple columns
+```
+
+The more detailed cell type was previously run and stored as:
+
+```{r}
+cell_type_pred <- readRDS(paste0(reference_data_path, "cell_type_pred.singler.rds"))
+```
+
+Load and redraw the umap embedding space, but with filtered annotations. All of them will crowd the plotting space (we're anyways only interested in intestine related cells).
+
+```{r}
+head(cell_type_pred)
+```
+
+metadata can be used to lookup for cell_category == epithelial cells; corresponding cell_type labels
+
+```{r}
+metadata <- read.csv(paste0(reference_data_path, "all_ref_data.csv"), sep=";")
+head(metadata)
+```
+
+```{r}
+metadata_intestine <- metadata %>% 
+  mutate(intestine = case_when(
+    category == "Epithelial" ~ TRUE,
+    .default = FALSE)) %>% 
+  select(cell_type, intestine) 
+
+metadata_intestine
+```
+
+```{r}
+library(dplyr)
+
+# 1. Get a list of the cell types that are actually "intestine"
+true_intestine_types <- metadata_intestine %>%
+  filter(intestine == TRUE) %>%
+  pull(cell_type)
+
+# 2. Filter the prediction dataframe
+filtered_preds <- cell_type_pred %>%
+  as.data.frame() %>% # Ensure it's a dataframe if it's a Seurat/SingleR object
+  filter(labels %in% true_intestine_types)
+
+head(filtered_preds)
+```
+
+```{r}
+# Save the annotation results
+EC$cell_type_automatic <- filtered_preds$pruned.labels[match(rownames(EC@meta.data), 
+                                                             rownames(filtered_preds))]
+```
+
+```{r}
+# Visualize
+DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_automatic', pt.size = 0.05, alpha=0.4) +
+  ggtitle("Cell type annotation on UMAP harmony") +
+  theme(legend.text = element_text(size = 8), 
+        plot.title = element_text(hjust = 0.5, face = "bold")) + 
   guides(fill = guide_legend(ncol = 3))         # Force the legend into multiple columns
 ```
