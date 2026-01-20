@@ -190,12 +190,13 @@ EC$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(EC))])
 
 ```{r}
 clusters <- DimPlot(EC, reduction = 'umap_harmony', label = TRUE)
-timepoint <- DimPlot(EC, reduction = 'umap_harmony', group.by = 'donor')
+donor <- DimPlot(EC, reduction = 'umap_harmony', group.by = 'donor')
 celltype <- DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_manual', label = TRUE) + NoLegend()
 ```
 
 ```{r}
-#saveRDS(EC, file = paste0(EC_seurats_path, "04_EC_manual.rds"))
+
+saveRDS(EC, file = paste0(EC_seurats_path, "04_EC_manual.rds"))
 ```
 
 # **Automatic cell type assignment**
