@@ -141,7 +141,7 @@ Making QC metric ViolinPlot
 # Visualize QC metrics as a violin plot
 p <- VlnPlot(EC, features = c("subset_nFeature", "nCount_RNA", "percent.mt", "percent.ribo"), ncol = 4, group.by = NULL)
 
-p
+#p
 ```
 
 Proposed QC cutoffs:
@@ -159,17 +159,9 @@ cells_before <- ncol(EC)
 counts_before <- as.data.frame(table(EC$orig.ident))
 dist_sample_table_before <- table(EC$orig.ident)
 
-# correct way, however did not work
-
-# cells_to_keep <- WhichCells(EC, expression = 
-#                                subset_nFeature > 200 &
-#                                subset_nFeature < 11000  &
-#                                percent.mt < 50 &
-#                                percent.ribo < 25)
-
 
 cells_to_keep <- WhichCells(EC, expression =
-                              subset_nFeature > 50 & 
+                              subset_nFeature > 100 & 
                               subset_nFeature < 11000 &
                                percent.mt < 25 &
                                percent.ribo < 50)
@@ -181,13 +173,6 @@ cells_to_keep <- intersect(cells_to_keep, colnames(EC[["ATAC"]]))
 # subset
 EC <- subset(EC, cells = cells_to_keep)
 
-
-# EC <- subset(
-#   x = EC,
-#   subset = nFeature_RNA > 200 &
-#            nFeature_RNA < 35000 &
-#            percent.mt < 8 &
-#            percent.ribo < 50)
 
 cells_after <- ncol(EC)
 cells_lost <- cells_before - cells_after
@@ -392,4 +377,6 @@ EC <- subset(EC, cells=singlet_names)
 # Saving with a simple name "EC"
 
 #saveRDS(EC, file = paste0(EC_seurats_path, "02_EC.rds"))
+
+saveRDS(EC, file = paste0(EC_seurats_path, "02_EC_v2.rds"))
 ```
