@@ -63,7 +63,7 @@ Idents(EC) <- "harmony_snn_res.1"
 
 
 df <- data.frame(
-  cluster = EC@meta.data$harmony_snn_res.,
+  cluster = EC@meta.data$harmony_snn_res.1,
   donor = EC@meta.data$donor
 )
 
@@ -147,26 +147,41 @@ for (cluster in levels(unique(Idents(EC) ))){
 
 ```{r}
 # 1. Create a mapping dictionary named "cell_typ_dict" like below.
-cell_typ_dict <- c( "1" = "CELL_TYPE_A", # replace these with real cell types.
-                     "2" = "CELL_TYPE_B",
-                     "3" = "CELL_TYPE_C",
-                     "4" = "CELL_TYPE_A",
-                     "5" = "CELL_TYPE_A",
-                     "6" = "CELL_TYPE_B",
-                     "7" = "CELL_TYPE_B",
-                     "8" = "CELL_TYPE_C",
-                     "9" = "CELL_TYPE_C",
-                     "10" = "CELL_TYPE_D",
-                     "11" = "CELL_TYPE_D",
-                     "12" = "CELL_TYPE_E",
-                     "13" = "CELL_TYPE_F",
-                     "14" = "CELL_TYPE_F",
-                     "15" = "CELL_TYPE_G")
+cell_typ_dict <- c( "1" = "CELL_TYPE_1", # replace these with real cell types.
+                     "2" = "CELL_TYPE_2",
+                     "3" = "CELL_TYPE_3",
+                     "4" = "CELL_TYPE_4",
+                     "5" = "Monocytes",
+                     "6" = "M2 Macrophages",
+                     "7" = "CELL_TYPE_7",
+                     "8" = "CELL_TYPE_8",
+                     "9" = "CELL_TYPE_9",
+                     "10" = "CELL_TYPE_10",
+                     "11" = "CELL_TYPE_11",
+                     "12" = "Smooth Muscle Cells",
+                     "13" = "CELL_TYPE_13",
+                     "14" = "CELL_TYPE_14",
+                     "15" = "Goblet cells",
+                     "16" = "CELL_TYPE_16",
+                     "17" = "Epithelial Cells",
+                     "18" = "Smooth Muscle Cells",
+                     "19" = "Glandular Epithelial Cells",
+                     "20" = "CELL_TYPE_20",
+                     "21" = "Macrophages",
+                     "22" = "Fibroblasts",
+                     "23" = "Vascular Endothelial Cells",
+                     "24" = "CELL_TYPE_24",
+                     "25" = "CELL_TYPE_25"
+                    )
 # 2. Map the clusters to the identified cell types and store them as a new column named "cell_type_manual".
-pbmc.MTB.cca$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(pbmc.MTB.cca))])
+EC$cell_type_manual <- unname(cell_typ_dict[as.character(Idents(EC))])
 
 ```
 
+
+```{r}
+# saveRDS(EC, file = paste0(EC_seurats_path, "04_EC_manual.rds"))
+```
 
 
 
