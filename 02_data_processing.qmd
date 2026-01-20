@@ -88,6 +88,10 @@ keep_genes <- rownames(EC)[!grepl(":", rownames(EC))]
 # Subset the Seurat object
 EC[["RNA"]] <- subset(EC[["RNA"]], features = keep_genes)
 
+EC@meta.data$subset_nFeature <- colSums(GetAssayData(EC, assay = "RNA", layer = "counts") > 0)
+
+
+  
 #EC <- subset(EC, features = keep_genes) #asbj: subset function was more safe than using []
 ```
 
@@ -97,7 +101,7 @@ EC[["RNA"]] <- subset(EC[["RNA"]], features = keep_genes)
 
 ```{r}
 #Mitochondrial genes
-EC@meta.data[["percent.mt"]] <- PercentageFeatureSet(EC, pattern = "^MT-")
+EC[["percent.mt"]] <- PercentageFeatureSet(EC, pattern = "^MT-")
 
 #Ribosomal genes proportions
 EC[["percent.ribo"]] <- PercentageFeatureSet(EC, pattern = "^RPS|^RPL|^rps|^rpl")
@@ -124,11 +128,17 @@ Checking for no Na values for QC metric, should contain only zeros
 
 ```{r}
 colSums(is.na(EC@meta.data[, c(
-  "nFeature_RNA",
+  "subset_nFeature",
   "nCount_RNA",
   "percent.mt",
   "percent.ribo"
 )]))
+
+
+```
+
+```{r}
+EC@meta.data$percent.mt[is.na(EC@meta.data)]
 ```
 
 Making QC metric ViolinPlot
@@ -143,13 +153,13 @@ levels(Idents(EC))
 # Idents(EC) <- EC$donor
 
 # Visualize QC metrics as a violin plot
-p <- VlnPlot(EC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo"), ncol = 4, group.by = NULL)
+p <- VlnPlot(EC, features = c("subset_nFeature", "nCount_RNA", "percent.mt", "percent.ribo"), ncol = 4, group.by = NULL)
 p
 ```
 
 Proposed QC cutoffs:
 
--   nFeature_RNA 200\< x \<35,000
+-   nFeature_RNA 200
 
 -   percent.mt: 8% = 0.08, as we do expect a bit higher metabolic activity (see litt. reference in pp)
 
@@ -162,17 +172,22 @@ cells_before <- ncol(EC)
 counts_before <- as.data.frame(table(EC$orig.ident))
 dist_sample_table_before <- table(EC$orig.ident)
 
-cells_to_keep <- WhichCells(EC, expression = 
-                              nFeature_RNA > 200 &
-                              nFeature_RNA < 35000 &
-                              percent.mt < 8 &
-                              percent.ribo < 50)
+
+EC_subset <- subset(EC, subset= subset_nFeature > 200 & subset_nFeature < 11000 & percent.mt < 50 & percent.ribo < 50)
+
+
+# cells_to_keep <- WhichCells(EC, expression = 
+#                               subset_nFeature > 200 &
+#                               subset_nFeature < 10000  &
+#                               percent.mt < 75 &
+#                               percent.ribo < 50)
 
 # intersect with ATAC cells
 cells_to_keep <- intersect(cells_to_keep, colnames(EC[["ATAC"]]))
 
 # subset
-EC <- subset(EC, cells = cells_to_keep)
+EC_qc <- subset(EC, cells = cells_to_keep)
+
 
 # EC <- subset(
 #   x = EC,
@@ -181,10 +196,10 @@ EC <- subset(EC, cells = cells_to_keep)
 #            percent.mt < 8 &
 #            percent.ribo < 50)
 
-cells_after <- ncol(EC)
+cells_after <- ncol(EC_subset)
 cells_lost <- cells_before - cells_after
-counts_after <- as.data.frame(table(EC$orig.ident))
-dist_sample_table_after <- table(EC$orig.ident)
+counts_after <- as.data.frame(table(EC_subset$orig.ident))
+dist_sample_table_after <- table(EC_subset$orig.ident)
 
 print(paste("Cells lost:", cells_lost))
 print(paste("Percentage lost:", round((cells_lost/cells_before)*100, 2), "%"))
