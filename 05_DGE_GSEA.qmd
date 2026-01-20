@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
   library(metap)
   library(tibble)
   library(DESeq2)
+  library(org.Hs.eg.db)
 })
 
 source("./paths.R")
@@ -144,3 +145,80 @@ print(top20_sig_genes)
 ```
 
 ### fgsea
+
+Depending on the library different gene-sets can be obtained. For this project, we will utilize the gene-sets from the exercises
+
+```{r}
+# Load gene-sets
+gsList <- readRDS("/home/projects/22102_single_cell/day5/gene_sets.Rds")
+```
+
+```{r}
+# res-object frmo DESeq2
+res$genes <- rownames(res)
+
+#Add EntrezID for the genes using 'library(org.Hs.eg.db)'
+Entrez <- AnnotationDbi::select(org.Hs.eg.db,
+                                key=res$genes, 
+                                columns="ENTREZID",
+                                keytype="SYMBOL")
+
+Entrez <- as_tibble(Entrez)
+res <- as.data.frame(res)
+res <- inner_join(res, Entrez, by=c("genes"="SYMBOL"))
+
+# Remove the genes that do not have an entrezID
+res <- filter(res, !is.na(ENTREZID))
+```
+
+```{r}
+# Create a ranked gene list. 
+# In the exercises they use:    -log10(pvalue) * sign(log2FoldChange)
+
+# Create new metric 'stat_sig'
+res$stat_sig <- -log10(res$pvalue) * sign(res$log2FoldChange)
+rankData <- res$stat_sig
+names(rankData) <- res$genes
+```
+
+```{r}
+# Run fgsea algorithm
+fgseaRes <- fgsea(pathways=gsList, # gene-set reference list
+                  stats=rankData)  # ranked gene list
+
+# Tidy the results
+fgseaResTidy <- fgseaRes %>%
+  as_tibble() %>%
+  arrange(desc(NES))
+
+head(fgseaResTidy)
+```
+
+We can then plot the top 10 up-/down-regulated pathways enriched in cell type X for the sick donors
+
+```{r}
+# Sort the data frame based on NES in descending order to get top 10 pathways
+top_10 <- fgseaResTidy %>%
+  arrange(desc(NES)) %>%
+  head(10)
+
+# Sort the data frame based on NES in ascending order to get bottom 10 pathways
+bottom_10 <- fgseaResTidy %>%
+  arrange(NES) %>%
+  head(10)
+
+# Combine top 10 and bottom 10 pathways
+top_bottom_10 <- rbind(top_10, bottom_10)
+
+g <- ggplot(top_bottom_10, 
+            aes(reorder(pathway, NES), NES)) +
+  
+  geom_col(aes(fill=padj<0.05)) +
+  coord_flip() +
+  labs(x="Pathway", 
+       y="Normalized Enrichment Score",
+       title="Top 10 and Bottom 10 Hallmark pathways based on Absolute NES from GSEA") + 
+  theme_minimal()
+
+print(g)
+```
