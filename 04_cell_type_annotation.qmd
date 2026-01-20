@@ -24,7 +24,7 @@ source("./paths.R")
 EC <- readRDS(paste0(EC_seurats_path, "03_EC.rds"))
 ```
 
-#Maunal Cell annotation
+# Maunal Cell annotation
 
 ### Cell clustering
 
@@ -197,7 +197,7 @@ celltype <- DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_manual
 #saveRDS(EC, file = paste0(EC_seurats_path, "04_EC_manual.rds"))
 ```
 
-**Automatic cell type assignment**
+# **Automatic cell type assignment**
 
 following this tutorial: https://biostatsquid.com/singler-tutorial/
 
@@ -253,30 +253,30 @@ write.table(rna_features_data,
 
 ```{r}
 # Create Seurat object
-counts <- ReadMtx(
-  mtx = rna_matrix,
-  features = rna_features,
-  cells = rna_barcodes
-)
-
-seurat_obj <- CreateSeuratObject(
-  counts = counts,
-  project = "reference"
-)
-
-saveRDS(seurat_obj, file = paste0(reference_data_path, "ref.rds"))
+# counts <- ReadMtx(
+#   mtx = rna_matrix,
+#   features = rna_features,
+#   cells = rna_barcodes
+# )
+# 
+# REF <- CreateSeuratObject(
+#   counts = counts,
+#   project = "reference"
+# )
+# 
+# saveRDS(REF, file = paste0(reference_data_path, "ref.rds"))
 ```
 
 ```{r}
-#REF <- readRDS(paste0(reference_data_path, "ref.rds"))
+REF <- readRDS(paste0(reference_data_path, "ref.rds"))
 ```
 
 ```{r}
 # Reference meta data
-# metadata <- read.csv(paste0(reference_data_path, "all_ref_data.csv"), sep=";")
-# 
-# # Check the first few rows to ensure 'cell_type' is present
-# head(metadata[, "cell_type", drop = FALSE])
+metadata <- read.csv(paste0(reference_data_path, "all_ref_data.csv"), sep=";")
+
+# Check the first few rows to ensure 'cell_type' is present
+head(metadata[, "cell_type", drop = FALSE])
 ```
 
 ```{r}
@@ -322,33 +322,45 @@ We want to first subset based on 'tissue'. Here, we would like to only work with
 
 ```{r}
 # Subset based on tissue
- REF.filtered <- subset(REF,
+REF.filtered <- subset(REF,
                         tissue %in% c("ascending colon", "transverse colon"))
-# 
-# # Subset based on disease_state -> we would only like to keep 'normal'
-# REF.filtered <- subset(REF.filtered,
-#                        disease_state == "normal")
-# 
-# # Subset based on ref_diagnosis -> we would like to discard "Pediatric Crohn Disease"
-# REF.filtered <- subset(REF.filtered,
-#                        ref_diagnosis != "Pediatric Crohn Disease")
+
+# Subset based on disease_state -> we would only like to keep 'normal'
+REF.filtered <- subset(REF.filtered,
+                       disease_state == "normal")
+
+# Subset based on ref_diagnosis -> we would like to discard "Pediatric Crohn Disease"
+REF.filtered <- subset(REF.filtered,
+                       ref_diagnosis != "Pediatric Crohn Disease")
 ```
 
+Normalize the data (get logcounts)
+
 ```{r}
-# Save subsetted reference data
-#saveRDS(REF.filtered, file = paste0(reference_data_path, "ref_subset.rds"))
+#| warning: false
+#| message: false
+
+REF.filtered <- NormalizeData(REF.filtered)
+REF.filtered <- FindVariableFeatures(REF.filtered)
+REF.filtered <- ScaleData(REF.filtered)
+```
+
+Save subsetted reference data
+
+```{r}
+saveRDS(REF.filtered, file = paste0(reference_data_path, "ref_subset2.rds"))
 ```
 
 #### Run SingleR
 
 ```{r}
 # Load reference data
-#ref <- readRDS(paste0(reference_data_path, "ref_subset.rds"))
+ref <- readRDS(paste0(reference_data_path, "ref_subset2.rds"))
 ```
 
 ```{r}
 # Work with the reference database as a SCE object
-ref <- as.SingleCellExperiment(REF.filtered, assay = "RNA")
+ref <- as.SingleCellExperiment(ref, assay = "RNA")
 ```
 
 ```{r}
@@ -357,19 +369,25 @@ EC_counts <- GetAssayData(EC, assay = "RNA", layer = 'counts')
 
 ```{r}
 # Run SingleR
-cell_type_pred <- SingleR(test = EC_counts,
+cell_category_pred <- SingleR(test = EC_counts,
                           ref = ref,
-                          labels = ref$cell_type,
+                          labels = ref$cell_category, #cell_type for more specific view
                           de.method="wilcox")
 ```
 
 ```{r}
+saveRDS(cell_category_pred, paste0(reference_data_path, "cell_category_pred.singler.rds"))
+```
+
+```{r}
 # Save the annotation results
-obj.cca$cell_type_automatic <- cell_type_pred$pruned.labels[match(rownames(obj.cca@meta.data), 
-                                                                  rownames(cell_type_pred))]
+EC$cell_type_automatic <- cell_type_pred$pruned.labels[match(rownames(EC@meta.data), 
+                                                             rownames(cell_category_pred))]
 ```
 
 ```{r}
 # Visualize
-DimPlot(obj.cca, reduction = 'umap_cca', group.by = 'cell_type_automatic')
+DimPlot(EC, reduction = 'harmony_Integration', group.by = 'cell_type_automatic', pt.size = 0.1) +
+  theme(legend.text = element_text(size = 8)) + # Shrink legend text
+  guides(fill = guide_legend(ncol = 3))         # Force the legend into multiple columns
 ```
