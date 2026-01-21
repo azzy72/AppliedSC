@@ -18,8 +18,33 @@ source("./paths.R")
 ```
 
 ```{r}
-EC <- readRDS(paste0(EC_seurats_path, "04_EC_manual.rds"))
+EC <- readRDS(paste0(EC_seurats_path, "04_EC.rds"))
 print(EC)
+```
+
+## QC of ATAC
+
+```{r}
+DefaultAssay(EC) <- "ATAC" 
+
+EC$orig_cluster_ident <- Idents(EC)  # backup current cluster identities
+EC$all <- "all cells"
+Idents(EC) <- "all"
+
+EC@meta.data$subset_nFeature_ATAC <- colSums(GetAssayData(EC, assay = "ATAC", layer = "counts") > 0)
+
+
+VlnPlot(EC, features = c("nCount_ATAC"), ncol = 2,
+  log = TRUE, pt.size = 0) + NoLegend()
+```
+
+```{r}
+
+atac_cells <- WhichCells(EC, expression = nCount_ATAC > 500 & nCount_ATAC < 90000)
+
+# intersecting 
+EC <- subset(EC, cells= atac_cells)
+
 ```
 
 ## Data processing
@@ -42,7 +67,13 @@ DepthCor(EC)
 EC <- RunUMAP(EC, reduction = "lsi", dims = 2:30, reduction.name = "umap.atac", reduction.key = "atacUMAP_")
 ```
 
-## Data integration - vertical 
+```{r}
+Idents(EC) <- 'donor'
+
+DimPlot(EC, reduction='umap.atac') + ggtitle("ATAC non-integrated")
+```
+
+## Data integration - vertical
 
 ```{r}
 
@@ -73,4 +104,118 @@ FeaturePlot(
   features = c("RNA.weight", "ATAC.weight"),
   reduction = "wnn.umap"
 )
+```
+
+### Cell annotation
+
+```{r}
+
+Idents(EC) <- "cell_type_automatic"
+
+# plot
+p1 <- DimPlot(EC, reduction = "umap_harmony", group.by = "cell_type_automatic", label = TRUE, label.size = 2.5) + ggtitle("RNA")
+p2 <- DimPlot(EC, reduction = "umap.atac", group.by = "cell_type_automatic", label = TRUE, label.size = 2.5) + ggtitle("ATAC")
+p3 <- DimPlot(EC, reduction = "wnn.umap", group.by = "cell_type_automatic", label = TRUE, label.size = 2.5) + ggtitle("WNN")
+
+g <- (p1 | p2 | p3) & NoLegend() & theme(plot.title = element_text(hjust = 0.5))
+
+print(g)
+
+```
+
+## Regolatory - Identificatin of enriched motifs
+
+```{r}
+
+suppressPackageStartupMessages({
+  library(chromVAR)
+  library(JASPAR2020)
+  library(TFBSTools)
+  library(motifmatchr)
+  library(future)
+  library(BSgenome.Hsapiens.UCSC.hg38)
+})
+
+```
+
+```{r}
+
+# EC_subset <- subset(
+#   EC,
+#   subset = cell_type_automatic %in% c("colon epithelial cell", "intestine goblet cell", "macrophage", "glial cell")
+# )
+
+
+DefaultAssay(EC) <- "ATAC"
+
+EC_set <- getMatrixSet(x = JASPAR2020, opts = list(species = 9606, all_versions = FALSE))
+
+motif.matrix <- CreateMotifMatrix(features = granges(EC), pwm = EC_set, genome = 'hg38', use.counts = FALSE)
+
+motif.object <- CreateMotifObject(data = motif.matrix, pwm = EC_set)
+
+EC <- SetAssayData(EC, 
+                     assay = 'ATAC', 
+                     layer = 'motifs', 
+                     new.data = motif.object)
+
+# Note that this step can take 30-60 minutes
+#plan("sequential") 
+#plan(multisession(workers = 8))
+
+
+```
+
+```{r}
+
+library(BiocParallel)
+
+register(MulticoreParam(8)) # Use 8 cores
+
+# For Windows, MulticoreParam will not work, but you can use SnowParam:
+
+
+# register(SerialParam())
+```
+
+```{r}
+
+EC_chromvar <- RunChromVAR(
+  object = EC,
+  genome = BSgenome.Hsapiens.UCSC.hg38
+)
+```
+
+### Finding TF for each cell type
+
+**CDX1 / CDX2:** Intenstial epithelial linage determination
+
+**TCF4:** secretory/goblet linage
+
+**SPDEF:** goblet cell maturation + mucin production
+
+**XBP1**: goblet cell function - controls muscus barrier in colon by regulating MUC2
+
+**HNF1A:** epithelial differentiaton and metabolims (influence growth ect.)
+
+**STAT:** inflammaotry activation [https://pmc.ncbi.nlm.nih.gov/articles/PMC12151090/](https://pmc.ncbi.nlm.nih.gov/articles/PMC12151090/?utm_source=chatgpt.com)
+
+**YAP-TEAD4** - in colonic macrophages tissue repairCDX1 / CDX2
+
+<https://pubmed.ncbi.nlm.nih.gov/40189621/>
+
+**ELF4:** anti-inflammatory macrophages
+
+Find på glial cells!
+
+```{r}
+DefaultAssay(EC_chromvar) <- "chromvar"
+
+motif.name <- ConvertMotifID(EC, name = 'CDX1')
+gene_plot <- FeaturePlot(EC, features = "CDX1", reduction = 'wnn.umap')
+
+motif_plot <- FeaturePlot(EC_chromvar, features = motif.name, min.cutoff = 0, cols = c("lightgrey", "darkred"), reduction = 'wnn.umap')
+
+p3 <- DimPlot(EC_chromvar, reduction = "wnn.umap", group.by = "cell_type_automatic", label = TRUE, label.size = 2.5, repel = TRUE) + ggtitle("WNN") + NoLegend()
+gene_plot | motif_plot | p3
 ```
