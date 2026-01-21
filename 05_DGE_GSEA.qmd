@@ -16,6 +16,8 @@ suppressPackageStartupMessages({
   library(tibble)
   library(DESeq2)
   library(org.Hs.eg.db)
+  library(clusterProfiler)
+  library(jsonlite)
 })
 
 source("./paths.R")
@@ -391,23 +393,36 @@ Depending on the library different gene-sets can be obtained. For this project, 
 gsList <- readRDS("/home/projects/22102_single_cell/day5/gene_sets.Rds")
 ```
 
+
+loading in the data
+
 ```{r}
-# res-object frmo DESeq2
-res$genes <- rownames(res)
+# gmt_file <- "/home/projects/exam_2026_22102/group2/gsea_dataset/c8.all.v2025.1.Hs.entrez.gmt"
+# 
+# gmtList <- read.gmt("/home/projects/exam_2026_22102/group2/gsea_dataset/c8.all.v2025.1.Hs.entrez.gmt")
+# 
+# gmtList2 <- read.gmt("/home/projects/exam_2026_22102/group2/gsea_dataset/c8.all.v2025.1.Hs.symbols.gmt")
 
-#Add EntrezID for the genes using 'library(org.Hs.eg.db)'
-Entrez <- AnnotationDbi::select(org.Hs.eg.db,
-                                key=res$genes, 
-                                columns="ENTREZID",
-                                keytype="SYMBOL")
 
-Entrez <- as_tibble(Entrez)
-res <- as.data.frame(res)
-res <- inner_join(res, Entrez, by=c("genes"="SYMBOL"))
 
-# Remove the genes that do not have an entrezID
-res <- filter(res, !is.na(ENTREZID))
+gene_sets <- fromJSON("/home/projects/exam_2026_22102/group2/gsea_dataset/c8.all.v2025.1.Hs.txt")
+
+
+
 ```
+
+
+here we create the gene set list that we want to use!!
+
+```{r}
+# Extract only the genes into a named list
+gene_set_list <- lapply(gene_sets, function(x) x$geneSymbols)
+names(gene_set_list) <- names(gene_sets)
+
+
+```
+
+
 
 ```{r}
 # Create a ranked gene list. 
