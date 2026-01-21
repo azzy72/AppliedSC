@@ -21,51 +21,59 @@ suppressPackageStartupMessages({
 source("./paths.R")
 ```
 
+
+
 Load in data
 
 ```{r}
-EC <- readRDS(paste0(EC_seurats_path, "04_EC_manual.rds"))
+EC <- readRDS(paste0(EC_seurats_path, "04_EC.rds"))
 ```
+
+
+Creating disase_sample
+
+```{r}
+EC@meta.data$sample_disease <- paste(
+  EC@meta.data$donor,
+  EC@meta.data$Disease_status,
+  sep = "_"
+)
+```
+
 
 ### DESeq2
 
-```{r}
-
-```
 
 ```{r}
+
 # Pseudobulk data
 # Aggregate counts to donor level
 # REMEMBER to doublecheck if we are grouping by cell type and donor
 counts <- AggregateExpression(EC, 
-                              group.by = c("cell_type_manual", "donor"),
+                              group.by = c("cell_type_automatic", "sample_disease"),
                               assays =  "RNA",
                               return.seurat = FALSE)
 
-# Transpose
+counts <- counts$RNA
+
+# transpose
 counts.t <- t(counts)
 
-# Convert to data.frame
+# convert to data.frame
 counts.t <- as.data.frame(counts.t)
 
-# Get values where to split
-# EXAMPLE: from 'Bcell_sample1' to 'Bcell'
+# get values where to split
 splitRows <- gsub('_.*', '', rownames(counts.t))
-```
 
-```{r}
-# Split data.frame
+# split data.frame
 cts.split <- split.data.frame(counts.t,
                               f = factor(splitRows))
-# Fix colnames and transpose
+# fix colnames and transpose
 cts.split.modified <- lapply(cts.split, function(x){
-    rownames(x) <- gsub('.*_(.*)', '\\1', rownames(x)) 
-    # EXAMPLE: from 'Bcell_sample1' to 'sample1'
+    rownames(x) <- gsub('.*_(.*)', '\\1', rownames(x)) #whatever comes after the underscore in the row names will be retained in the final result.
     t(x)
 })
 ```
-
-We then "subset" the data looking only at a target cell type and its count matrix.
 
 ```{r}
 # REMEMBER to replace 'cell_type' with e.g. 'CD14+ Monocyte'
@@ -74,7 +82,7 @@ We then "subset" the data looking only at a target cell type and its count matri
 # counts_monocytes <- cts.split.modified$`CD14+ Monocyte`
 
 # SUGGESTION: update the name 'counts_cell_type'
-counts_cell_type <- cts.split.modified$`cell_type`
+counts_cell_type <- cts.split.modified$`colon epithelial cell`
 ```
 
 ```{r}
@@ -82,15 +90,10 @@ counts_cell_type <- cts.split.modified$`cell_type`
 # REMEMEBER to update 'counts_cell_type'
 colData <- data.frame(samples = colnames(counts_cell_type))
 
-# # Grep only hypertension donors and assign 'Sick'-label
-# colData <- colData %>%
-#   # Replace 'hypertension' with the string that defines the donor as sick
-#   # in the 'samples'-column. 
-#   dplyr::mutate(condition = ifelse(grepl('hypertension', samples), 
-#                                    'Sick', 
-#                                    'Normal')) %>%
-#   
-#   column_to_rownames(var = 'donor')
+colData <- colData %>%
+  dplyr::mutate(condition = ifelse(grepl("Disease", samples), 'Disease', 'Healthy')) %>%
+  column_to_rownames(var = 'samples')
+
 ```
 
 Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
@@ -98,9 +101,11 @@ Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
 ```{r}
 # Create DESeq2 object   
 # REMEMEBER to update 'counts_cell_type'
-dds <- DESeqDataSetFromMatrix(countData = counts_cell_typee,
+dds <- DESeqDataSetFromMatrix(countData = counts_cell_type,
                               colData = colData,
                               design = ~ condition)
+
+
 ```
 
 ```{r}
@@ -114,7 +119,7 @@ dds <- dds[keep,]
 dds <- DESeq(dds)
 
 # Save the resuslts
-res <- result(dds, name = "condition_Sick_vs_Control")
+res <- results(dds, name = "condition_Healthy_vs_Disease")
 summary(res)
 ```
 
