@@ -62,7 +62,8 @@ options(future.globals.maxSize = 4 * 1024^3)
 # Increase the maximum size (e.g. 4 GB)
 
 ptm = Sys.time()
-cellchat <- computeCommunProb(cellchat, type = "triMean")
+cellchat <- computeCommunProb(cellchat, 
+                              type = "triMean")
 ```
 
 ```{r}
@@ -96,15 +97,16 @@ groupSize <- as.numeric(table(cellchat@idents))
 ```{r}
 # Visualize
 par(mfrow = c(1,2), xpd=TRUE, mar=c(4,4,4,4)) # enlarge right margin 
-netVisual_circle(cellchat@net$count, vertex.weight = groupSize, weight.scale = TRUE, label.edge=FALSE, title.name = "Number of interactions") 
-netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, weight.scale = TRUE, label.edge=FALSE, title.name = "Interaction strength")
-```
-
-```{r}
-# Testing Chord diagram:
-# Link: https://htmlpreview.github.io/?https://github.com/jinworks/CellChat/blob/master/tutorial/CellChat-vignette.html#visualize-each-signaling-pathway-using-hierarchy-plot-circle-plot-or-chord-diagram
-
-
+netVisual_circle(cellchat@net$count, 
+                 vertex.weight = groupSize, 
+                 weight.scale = TRUE, 
+                 label.edge=FALSE, 
+                 title.name = "Number of interactions") 
+netVisual_circle(cellchat@net$weight, 
+                 vertex.weight = groupSize, 
+                 weight.scale = TRUE, 
+                 label.edge=FALSE, 
+                 title.name = "Interaction strength")
 ```
 
 ```{r}
@@ -114,5 +116,7 @@ pathways.show <- c("ANGPTL")
 
 # Circle plot
 par(mfrow = c(1,1), xpd=TRUE, mar=c(4,4,4,4))
-netVisual_aggregate(cellchat, signaling = pathways.show, layout = "circle")
+netVisual_aggregate(cellchat, 
+                    signaling = pathways.show, 
+                    layout = "circle")
 ```
