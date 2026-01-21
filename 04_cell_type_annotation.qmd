@@ -454,17 +454,44 @@ head(filtered_preds)
 
 ```{r}
 # Save the annotation results
-EC$cell_type_automatic <- filtered_preds$pruned.labels[match(rownames(EC@meta.data), 
+EC$cell_type_automatic_per_cell <- filtered_preds$pruned.labels[match(rownames(EC@meta.data), 
                                                              rownames(filtered_preds))]
 ```
 
+Base; annotation per cell
+
 ```{r}
 # Visualize
-DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_automatic', pt.size = 0.05, alpha=0.4) +
+DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_automatic_per_cell', pt.size = 0.05, alpha=0.4) +
   ggtitle("Cell type annotation on UMAP harmony") +
   theme(legend.text = element_text(size = 8), 
         plot.title = element_text(hjust = 0.5, face = "bold")) + 
   guides(fill = guide_legend(ncol = 3))         # Force the legend into multiple columns
+```
+
+Annotation per cluster (majority cell type)
+
+```{r}
+library(dplyr)
+
+# 1. Create a mapping table: Most frequent label per cluster
+cluster_labels <- EC@meta.data %>%
+  group_by(seurat_clusters) %>%
+  dplyr::count(cell_type_automatic_per_cell) %>%
+  filter(!is.na(cell_type_automatic_per_cell) & cell_type_automatic_per_cell != "NA") %>% 
+  slice_max(n, n = 1) %>% # Take the top label per cluster
+  select(seurat_clusters, majority_label = cell_type_automatic_per_cell)
+
+# 2. Add these majority labels to the Seurat metadata
+# We use match() again to ensure the clusters align correctly
+EC$cell_type_automatic <- cluster_labels$majority_label[match(EC$seurat_clusters, cluster_labels$seurat_clusters)]
+
+# 3. Plot the result
+DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_automatic', pt.size = 0.05, alpha = 0.4, label = TRUE) +
+  ggtitle("Cell cluster annotation on UMAP harmony") +
+  theme(legend.text = element_text(size = 8), 
+        plot.title = element_text(hjust = 0.5, face = "bold")) + 
+  guides(fill = guide_legend(ncol = 3))
 ```
 
 Filtering out NA labels
@@ -476,8 +503,15 @@ DimPlot(subset(EC, subset = cell_type_automatic != "NA"),
         group.by = 'cell_type_automatic', 
         pt.size = 0.05, 
         alpha = 0.4) +
-  ggtitle("Cell type annotation on UMAP Harmony") +
+  ggtitle("Cell type annotation on UMAP harmony") +
   theme(legend.text = element_text(size = 8), 
         plot.title = element_text(hjust = 0.5, face = "bold")) + 
   guides(fill = guide_legend(ncol = 3))
+```
+
+# Saving final Seurat object
+
+```{r}
+# Saving with a simple name "EC"
+saveRDS(EC, file = paste0(EC_seurats_path, "04_EC.rds"))
 ```
