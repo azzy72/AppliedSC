@@ -1,5 +1,5 @@
 ---
-title: "07_differential_composition_analysis"
+title: "05_differential_composition_analysis"
 format: html
 ---
 
@@ -16,6 +16,37 @@ library(ggrepel)
 library(tibble)
 library(tidyverse)
 })
+
+source("paths.R")
+
+EC <- readRDS(paste0(EC_seurats_path, "04_EC.rds"))
 ```
 
-For differential composition analysis, we use DCATS
+### DCA
+
+```{r}
+# Similarity Matrix
+sim_mat <- knn_simMat(EC@graphs$RNA_snn, EC$cell_type_automatic)
+
+# Count Matrix
+count_mat <- table(EC$donor, EC$cell_type_automatic)
+
+# Design Matrix
+donor_meta <- unique(EC@meta.data[, c("donor", "Disease_status")])
+# 2. Match donor IDs in count_mat to donor_meta 
+design_mat <- data.frame( condition = ifelse(donor_meta$Disease_status[ match(rownames(count_mat), donor_meta$donor) ] == "Disease", "sick", "control" ) ) 
+
+# 3. Keep donor IDs as rownames in the design matrix 
+rownames(design_mat) <- rownames(count_mat)
+```
+
+```{r}
+# Run DCATS
+res <- dcats_GLM(count_mat, design_mat, sim_mat)
+```
+
+```{r}
+print(res$LRT_pvals)
+```
+
+Macrophages are the only cell type where there is evidence that their proportions are influenced by their condition
