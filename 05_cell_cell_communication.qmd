@@ -1,5 +1,5 @@
 ---
-title: "07_cell_cell_communication"
+title: "05_cell_cell_communication"
 format: html
 ---
 
@@ -11,6 +11,10 @@ library(patchwork)
 library(future)
 })
 options(stringsAsFactors = FALSE)
+
+source("paths.R")
+
+EC <- readRDS(paste0(EC_seurats_path, "04_EC.rds"))
 ```
 
 Investigating cell-cell communication can be a good initial analysis to gain insight into the [potential]{.underline} interactions that the cells might have with each other.
@@ -24,20 +28,19 @@ showDatabaseCategory(CellChatDB)
 ```
 
 ```{r}
+EC$samples <- EC$donor
+# Create a CellChat object
+cellchat <- createCellChat(object = EC, 
+                           meta = EC@meta.data,
+                           group.by = "cell_type_automatic")
+```
+
+```{r}
 # Subset the database to 'Secreted Signaling'
 CellChatDB.ss <- subsetDB(CellChatDB, 
                           search = "Secreted Signaling")
 
 cellchat@DB <- CellChatDB.ss
-```
-
-SUBSET data?
-
-```{r}
-# Create a CellChat object
-cellchat <- createCellChat(object = obj.select, 
-                           meta = obj.select@meta.data,
-                           group.by = "cell_type_manual")
 ```
 
 ```{r}
@@ -50,6 +53,16 @@ cellchat <- identifyOverExpressedInteractions(cellchat)
 ```{r}
 # Set parallel to split the tasks
 future::plan("multisession", workers = 4)
+```
+
+```{r}
+# Compute the communication probability and infer cellular communication network
+# TriMean: Calculate the average gene expression per cell group
+options(future.globals.maxSize = 4 * 1024^3)
+# Increase the maximum size (e.g. 4 GB)
+
+ptm = Sys.time()
+cellchat <- computeCommunProb(cellchat, type = "triMean")
 ```
 
 ```{r}
@@ -82,15 +95,24 @@ groupSize <- as.numeric(table(cellchat@idents))
 
 ```{r}
 # Visualize
-par(mfrow = c(1,2), xpd=TRUE)
-netVisual_circle(cellchat@net$count, 
-                 vertex.weight = groupSize, 
-                 weight.scale = T, 
-                 label.edge= F, 
-                 title.name = "Number of interactions")
-netVisual_circle(cellchat@net$weight, 
-                 vertex.weight = groupSize, 
-                 weight.scale = T, 
-                 label.edge= F, 
-                 title.name = "Interaction strength")
+par(mfrow = c(1,2), xpd=TRUE, mar=c(4,4,4,4)) # enlarge right margin 
+netVisual_circle(cellchat@net$count, vertex.weight = groupSize, weight.scale = TRUE, label.edge=FALSE, title.name = "Number of interactions") 
+netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, weight.scale = TRUE, label.edge=FALSE, title.name = "Interaction strength")
+```
+
+```{r}
+# Testing Chord diagram:
+# Link: https://htmlpreview.github.io/?https://github.com/jinworks/CellChat/blob/master/tutorial/CellChat-vignette.html#visualize-each-signaling-pathway-using-hierarchy-plot-circle-plot-or-chord-diagram
+
+
+```
+
+```{r}
+pathways <- cellchat@netP$pathways
+
+pathways.show <- c("ANGPTL")
+
+# Circle plot
+par(mfrow = c(1,1), xpd=TRUE, mar=c(4,4,4,4))
+netVisual_aggregate(cellchat, signaling = pathways.show, layout = "circle")
 ```
