@@ -139,6 +139,7 @@ res_tbl <- res %>%
 
 # Subset the significant results
 sig_res <- dplyr::filter(res_tbl, padj < padj_cutoff)
+
 ```
 
 ```{r}
@@ -423,8 +424,43 @@ names(gene_set_list) <- names(gene_sets)
 ```
 
 
+```{r}
+
+res$genes <- rownames(res)
+#Add EntrezID for the genes
+library(org.Hs.eg.db)
+Entrez <- AnnotationDbi::select(org.Hs.eg.db,
+                                    key=res$genes, 
+                                    columns="ENTREZID",
+                                    keytype="SYMBOL")
+Entrez <- as_tibble(Entrez)
+res <- as.data.frame(res)
+res <- inner_join(res, Entrez, by=c("genes"="SYMBOL"))
+#Remove those genes that do not have an entrezID
+res <- filter(res, !is.na(ENTREZID))
+```
+
+
+Ensure no p avlues are na or 0( Check this!!)
 
 ```{r}
+res <- res %>%
+  filter(!is.na(log2FoldChange), !is.na(pvalue), pvalue > 0)
+
+```
+
+There are two duplikate genes: "TEC"  "MMD2". I chose only so retain the one with.
+
+```{r}
+res <- res %>%
+  filter(!genes %in% c("TEC", "MMD2"))
+```
+
+
+
+```{r}
+
+
 # Create a ranked gene list. 
 # In the exercises they use:    -log10(pvalue) * sign(log2FoldChange)
 
@@ -432,11 +468,15 @@ names(gene_set_list) <- names(gene_sets)
 res$stat_sig <- -log10(res$pvalue) * sign(res$log2FoldChange)
 rankData <- res$stat_sig
 names(rankData) <- res$genes
+
 ```
 
+
+
 ```{r}
+
 # Run fgsea algorithm
-fgseaRes <- fgsea(pathways=gsList, # gene-set reference list
+fgseaRes <- fgsea(pathways=gene_set_list, # gene-set reference list
                   stats=rankData)  # ranked gene list
 
 # Tidy the results
@@ -445,7 +485,9 @@ fgseaResTidy <- fgseaRes %>%
   arrange(desc(NES))
 
 head(fgseaResTidy)
+
 ```
+
 
 We can then plot the top 10 up-/down-regulated pathways enriched in cell type X for the sick donors
 
