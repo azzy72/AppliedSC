@@ -159,6 +159,229 @@ top20_sig_genes <- sig_res %>%
 print(top20_sig_genes)
 ```
 
+
+```{r}
+# REMEMBER to replace 'cell_type' with e.g. 'CD14+ Monocyte'
+
+# EXAMPLE:
+# counts_monocytes <- cts.split.modified$`CD14+ Monocyte`
+
+# SUGGESTION: update the name 'counts_cell_type'
+counts_glial_cells <- cts.split.modified$`glial cell`
+```
+
+```{r}
+# Define the colnames to be the colnames of the cell_type count matrix
+# REMEMEBER to update 'counts_cell_type'
+colData <- data.frame(samples = colnames(counts_glial_cells))
+
+colData <- colData %>%
+  dplyr::mutate(condition = ifelse(grepl("Disease", samples), 'Disease', 'Healthy')) %>%
+  column_to_rownames(var = 'samples')
+
+```
+
+Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
+
+```{r}
+# Create DESeq2 object   
+# REMEMEBER to update 'counts_cell_type'
+dds <- DESeqDataSetFromMatrix(countData = counts_glial_cells,
+                              colData = colData,
+                              design = ~ condition)
+
+
+```
+
+```{r}
+# Remove rows (genes) that have fewer than 10 reads.
+keep <- rowSums(counts(dds)) >=10
+dds <- dds[keep,]
+```
+
+```{r}
+# Run DESeq2
+dds <- DESeq(dds)
+
+# Save the resuslts
+res <- results(dds, name = "condition_Healthy_vs_Disease")
+summary(res)
+```
+There are no significantly differentially expressed glial cell genes
+
+
+```{r}
+# REMEMBER to replace 'cell_type' with e.g. 'CD14+ Monocyte'
+
+# EXAMPLE:
+# counts_monocytes <- cts.split.modified$`CD14+ Monocyte`
+
+# SUGGESTION: update the name 'counts_cell_type'
+counts_goblet_cell <- cts.split.modified$`intestine goblet cell`
+```
+
+```{r}
+# Define the colnames to be the colnames of the cell_type count matrix
+# REMEMEBER to update 'counts_cell_type'
+colData <- data.frame(samples = colnames(counts_goblet_cell))
+
+colData <- colData %>%
+  dplyr::mutate(condition = ifelse(grepl("Disease", samples), 'Disease', 'Healthy')) %>%
+  column_to_rownames(var = 'samples')
+
+```
+
+Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
+
+```{r}
+# Create DESeq2 object   
+# REMEMEBER to update 'counts_cell_type'
+dds <- DESeqDataSetFromMatrix(countData = counts_goblet_cell,
+                              colData = colData,
+                              design = ~ condition)
+
+
+```
+
+```{r}
+# Remove rows (genes) that have fewer than 10 reads.
+keep <- rowSums(counts(dds)) >=10
+dds <- dds[keep,]
+```
+
+```{r}
+# Run DESeq2
+dds <- DESeq(dds)
+
+# Save the resuslts
+res <- results(dds, name = "condition_Healthy_vs_Disease")
+summary(res)
+```
+
+We can now identify the top 20 differentially expressed genes in cell type X in sick donors compared to control donors. You can either sort by p-adjusted or log2FoldChange. padj reflects the significance of results while log2FoldChange reflects the "power" of the difference between the conditions (NOTE: account for negative and positive value by looking at the absolute values).
+
+```{r}
+# Set thresholds
+padj_cutoff <- 0.05
+
+# Turn the DESeq2 results object into a tibble for use with tidyverse functions
+res_tbl <- res %>%
+  data.frame() %>%
+  rownames_to_column(var = "gene") %>%
+  as_tibble()
+
+# Subset the significant results
+sig_res <- dplyr::filter(res_tbl, padj < padj_cutoff)
+```
+
+```{r}
+# Order results by padj values.
+top20_sig_genes <- sig_res %>%
+  dplyr::arrange(padj) %>%
+  dplyr::pull(gene) %>%
+  head(n=20)
+
+print(top20_sig_genes)
+```
+
+```{r}
+# Order results by log2FoldChange values.
+top20_sig_genes <- sig_res %>%
+  dplyr::arrange(log2FoldChange) %>%
+  dplyr::pull(gene) %>%
+  head(n=20)
+
+print(top20_sig_genes)
+```
+
+
+
+```{r}
+# REMEMBER to replace 'cell_type' with e.g. 'CD14+ Monocyte'
+
+# EXAMPLE:
+# counts_monocytes <- cts.split.modified$`CD14+ Monocyte`
+
+# SUGGESTION: update the name 'counts_cell_type'
+counts_macrophage <- cts.split.modified$`macrophage`
+```
+
+```{r}
+# Define the colnames to be the colnames of the cell_type count matrix
+# REMEMEBER to update 'counts_cell_type'
+colData <- data.frame(samples = colnames(counts_macrophage))
+
+colData <- colData %>%
+  dplyr::mutate(condition = ifelse(grepl("Disease", samples), 'Disease', 'Healthy')) %>%
+  column_to_rownames(var = 'samples')
+
+```
+
+Create a DESeq2 object to use for the function `DESeqDataSetFromMatrix()`
+
+```{r}
+# Create DESeq2 object   
+# REMEMEBER to update 'counts_cell_type'
+dds <- DESeqDataSetFromMatrix(countData = counts_macrophage,
+                              colData = colData,
+                              design = ~ condition)
+
+
+```
+
+```{r}
+# Remove rows (genes) that have fewer than 10 reads.
+keep <- rowSums(counts(dds)) >=10
+dds <- dds[keep,]
+```
+
+```{r}
+# Run DESeq2
+dds <- DESeq(dds)
+
+# Save the resuslts
+res <- results(dds, name = "condition_Healthy_vs_Disease")
+summary(res)
+```
+
+We can now identify the top 20 differentially expressed genes in cell type X in sick donors compared to control donors. You can either sort by p-adjusted or log2FoldChange. padj reflects the significance of results while log2FoldChange reflects the "power" of the difference between the conditions (NOTE: account for negative and positive value by looking at the absolute values).
+
+```{r}
+# Set thresholds
+padj_cutoff <- 0.05
+
+# Turn the DESeq2 results object into a tibble for use with tidyverse functions
+res_tbl <- res %>%
+  data.frame() %>%
+  rownames_to_column(var = "gene") %>%
+  as_tibble()
+
+# Subset the significant results
+sig_res <- dplyr::filter(res_tbl, padj < padj_cutoff)
+```
+
+```{r}
+# Order results by padj values.
+top20_sig_genes <- sig_res %>%
+  dplyr::arrange(padj) %>%
+  dplyr::pull(gene) %>%
+  head(n=20)
+
+print(top20_sig_genes)
+```
+
+```{r}
+# Order results by log2FoldChange values.
+top20_sig_genes <- sig_res %>%
+  dplyr::arrange(log2FoldChange) %>%
+  dplyr::pull(gene) %>%
+  head(n=20)
+
+print(top20_sig_genes)
+```
+
+
+
 ### fgsea
 
 Depending on the library different gene-sets can be obtained. For this project, we will utilize the gene-sets from the exercises
