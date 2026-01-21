@@ -425,10 +425,21 @@ metadata_intestine
 ```
 
 ```{r}
+metadata_intestine_wbc <- metadata %>% 
+  mutate(intestine = case_when(
+    category == "Epithelial" ~ TRUE,
+    category == "Myeloid" ~ TRUE,
+    .default = FALSE)) %>% 
+  select(cell_type, intestine) 
+
+metadata_intestine_wbc
+```
+
+```{r}
 library(dplyr)
 
 # 1. Get a list of the cell types that are actually "intestine"
-true_intestine_types <- metadata_intestine %>%
+true_intestine_types <- metadata_intestine_wbc %>%
   filter(intestine == TRUE) %>%
   pull(cell_type)
 
@@ -453,4 +464,19 @@ DimPlot(EC, reduction = 'umap_harmony', group.by = 'cell_type_automatic', pt.siz
   theme(legend.text = element_text(size = 8), 
         plot.title = element_text(hjust = 0.5, face = "bold")) + 
   guides(fill = guide_legend(ncol = 3))         # Force the legend into multiple columns
+```
+
+Filtering out NA labels
+
+```{r}
+# Filter out the cells where cell_type_automatic is NA
+DimPlot(subset(EC, subset = cell_type_automatic != "NA"), 
+        reduction = 'umap_harmony', 
+        group.by = 'cell_type_automatic', 
+        pt.size = 0.05, 
+        alpha = 0.4) +
+  ggtitle("Cell type annotation on UMAP Harmony") +
+  theme(legend.text = element_text(size = 8), 
+        plot.title = element_text(hjust = 0.5, face = "bold")) + 
+  guides(fill = guide_legend(ncol = 3))
 ```
