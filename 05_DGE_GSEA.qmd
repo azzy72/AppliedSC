@@ -389,11 +389,6 @@ print(top20_sig_genes)
 
 Depending on the library different gene-sets can be obtained. For this project, we will utilize the gene-sets from the exercises
 
-```{r}
-# Load gene-sets
-gsList <- readRDS("/home/projects/22102_single_cell/day5/gene_sets.Rds")
-```
-
 
 loading in the data
 
@@ -404,8 +399,14 @@ loading in the data
 # 
 # gmtList2 <- read.gmt("/home/projects/exam_2026_22102/group2/gsea_dataset/c8.all.v2025.1.Hs.symbols.gmt")
 
+#For Geneset Ontology
+geneset_ontology <- fromJSON("/home/projects/exam_2026_22102/group2/gsea_dataset/c5.all.v2025.1.Hs.txt")
+
+#For Diverse Pathways
+gsList <- readRDS("/home/projects/22102_single_cell/day5/gene_sets.Rds")
 
 
+#For cell types
 gene_sets <- fromJSON("/home/projects/exam_2026_22102/group2/gsea_dataset/c8.all.v2025.1.Hs.txt")
 
 
@@ -424,6 +425,20 @@ names(gene_set_list) <- names(gene_sets)
 ```
 
 
+
+```{r}
+# Extract only the genes into a named list
+geneset_ontology <- lapply(geneset_ontology, function(x) x$geneSymbols)
+names(geneset_ontology) <- names(geneset_ontology)
+
+
+```
+
+
+
+
+#-----------------For cell type----------------------------------##
+
 ```{r}
 
 res$genes <- rownames(res)
@@ -433,11 +448,14 @@ Entrez <- AnnotationDbi::select(org.Hs.eg.db,
                                     key=res$genes, 
                                     columns="ENTREZID",
                                     keytype="SYMBOL")
+
 Entrez <- as_tibble(Entrez)
 res <- as.data.frame(res)
 res <- inner_join(res, Entrez, by=c("genes"="SYMBOL"))
 #Remove those genes that do not have an entrezID
 res <- filter(res, !is.na(ENTREZID))
+
+
 ```
 
 
@@ -517,3 +535,215 @@ g <- ggplot(top_bottom_10,
 
 print(g)
 ```
+
+
+
+
+
+#-----------------For Diverse Pathway----------------------------------------##
+
+
+
+```{r}
+
+res$genes <- rownames(res)
+#Add EntrezID for the genes
+library(org.Hs.eg.db)
+Entrez <- AnnotationDbi::select(org.Hs.eg.db,
+                                    key=res$genes, 
+                                    columns="ENTREZID",
+                                    keytype="SYMBOL")
+Entrez <- as_tibble(Entrez)
+res <- as.data.frame(res)
+res <- inner_join(res, Entrez, by=c("genes"="SYMBOL"))
+#Remove those genes that do not have an entrezID
+res <- filter(res, !is.na(ENTREZID))
+```
+
+
+Ensure no p avlues are na or 0( Check this!!)
+
+```{r}
+res <- res %>%
+  filter(!is.na(log2FoldChange), !is.na(pvalue), pvalue > 0)
+
+```
+
+
+```{r}
+names(anyDuplicated(res$genes))
+```
+
+There are two duplikate genes: "TEC"  "MMD2". I chose only so retain the one with.
+
+```{r}
+res <- res %>%
+  filter(!genes %in% c("TEC", "MMD2"))
+```
+
+
+
+```{r}
+
+
+# Create a ranked gene list. 
+# In the exercises they use:    -log10(pvalue) * sign(log2FoldChange)
+
+# Create new metric 'stat_sig'
+res$stat_sig <- -log10(res$pvalue) * sign(res$log2FoldChange)
+rankData <- res$stat_sig
+names(rankData) <- res$genes
+
+```
+
+
+
+```{r}
+
+# Run fgsea algorithm
+fgseaRes <- fgsea(pathways=geneset_ontology, # gene-set reference list
+                  stats=rankData)  # ranked gene list
+
+# Tidy the results
+fgseaResTidy <- fgseaRes %>%
+  as_tibble() %>%
+  arrange(desc(NES))
+
+head(fgseaResTidy)
+
+```
+
+
+We can then plot the top 10 up-/down-regulated pathways enriched in cell type X for the sick donors
+
+```{r}
+# Sort the data frame based on NES in descending order to get top 10 pathways
+top_10 <- fgseaResTidy %>%
+  arrange(desc(NES)) %>%
+  head(10)
+
+# Sort the data frame based on NES in ascending order to get bottom 10 pathways
+bottom_10 <- fgseaResTidy %>%
+  arrange(NES) %>%
+  head(10)
+
+# Combine top 10 and bottom 10 pathways
+top_bottom_10 <- rbind(top_10, bottom_10)
+
+g <- ggplot(top_bottom_10, 
+            aes(reorder(pathway, NES), NES)) +
+  
+  geom_col(aes(fill=padj<0.05)) +
+  coord_flip() +
+  labs(x="Pathway", 
+       y="Normalized Enrichment Score",
+       title="Top 10 and Bottom 10 Hallmark pathways based on Absolute NES from GSEA") + 
+  theme_minimal()
+
+print(g)
+```
+
+
+#-----------------For Gene Ontology-----------------------------------------##
+
+
+```{r}
+
+res$genes <- rownames(res)
+#Add EntrezID for the genes
+library(org.Hs.eg.db)
+Entrez <- AnnotationDbi::select(org.Hs.eg.db,
+                                    key=res$genes, 
+                                    columns="ENTREZID",
+                                    keytype="SYMBOL")
+
+Entrez <- as_tibble(Entrez)
+res <- as.data.frame(res)
+res <- inner_join(res, Entrez, by=c("genes"="SYMBOL"))
+#Remove those genes that do not have an entrezID
+res <- filter(res, !is.na(ENTREZID))
+
+
+```
+
+
+Ensure no p avlues are na or 0( Check this!!)
+
+```{r}
+res <- res %>%
+  filter(!is.na(log2FoldChange), !is.na(pvalue), pvalue > 0)
+
+```
+
+There are two duplikate genes: "TEC"  "MMD2". I chose only so retain the one with.
+
+```{r}
+res <- res %>%
+  filter(!genes %in% c("TEC", "MMD2"))
+```
+
+
+
+```{r}
+
+
+# Create a ranked gene list. 
+# In the exercises they use:    -log10(pvalue) * sign(log2FoldChange)
+
+# Create new metric 'stat_sig'
+res$stat_sig <- -log10(res$pvalue) * sign(res$log2FoldChange)
+rankData <- res$stat_sig
+names(rankData) <- res$genes
+
+```
+
+
+
+```{r}
+
+# Run fgsea algorithm
+fgseaRes <- fgsea(pathways=gene_set_list, # gene-set reference list
+                  stats=rankData)  # ranked gene list
+
+# Tidy the results
+fgseaResTidy <- fgseaRes %>%
+  as_tibble() %>%
+  arrange(desc(NES))
+
+head(fgseaResTidy)
+
+```
+
+
+
+We can then plot the top 10 up-/down-regulated pathways enriched in cell type X for the sick donors
+
+```{r}
+# Sort the data frame based on NES in descending order to get top 10 pathways
+top_10 <- fgseaResTidy %>%
+  arrange(desc(NES)) %>%
+  head(10)
+
+# Sort the data frame based on NES in ascending order to get bottom 10 pathways
+bottom_10 <- fgseaResTidy %>%
+  arrange(NES) %>%
+  head(10)
+
+# Combine top 10 and bottom 10 pathways
+top_bottom_10 <- rbind(top_10, bottom_10)
+
+g <- ggplot(top_bottom_10, 
+            aes(reorder(pathway, NES), NES)) +
+  
+  geom_col(aes(fill=padj<0.05)) +
+  coord_flip() +
+  labs(x="Pathway", 
+       y="Normalized Enrichment Score",
+       title="Top 10 and Bottom 10 Hallmark pathways based on Absolute NES from GSEA") + 
+  theme_minimal()
+
+print(g)
+```
+
+
+
