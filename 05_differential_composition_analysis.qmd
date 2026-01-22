@@ -49,4 +49,7 @@ res <- dcats_GLM(count_mat, design_mat, sim_mat)
 print(res$LRT_pvals)
 ```
 
-Macrophages are the only cell type where there is evidence that their proportions are influenced by their condition
+Macrophages are the only cell type where there is evidence that their proportions are influenced by their condition. Highest abundance in sick.
+
+Reference (baseline) = `"control"`
+Comparison (tested) = `"sick"`
